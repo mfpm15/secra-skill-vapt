@@ -62,7 +62,8 @@ def tools():
     return [{"name": x.name, "risk": x.risk, "mode": x.mode,
              "description": x.description,
              "availability": DISPATCHER.manifest.probe(x.name)["status"],
-             "kali_package": (x.metadata or {}).get("kali_package", "unknown")}
+             "kali_package": (x.metadata or {}).get("kali_package", "unknown"),
+             "category": (x.metadata or {}).get("category", "unknown")}
             for x in DISPATCHER.manifest.visible()]
 
 
