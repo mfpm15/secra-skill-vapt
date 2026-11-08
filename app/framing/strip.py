@@ -38,13 +38,16 @@ def strip_command(response: str, manifest: CommandSpec) -> list[str]:
         raise CommandStripError("COMMAND_SAFETY_REFUSAL")
     if lines and _INTRO.fullmatch(lines[0]):
         lines.pop(0)
-    while lines and _ASSUMPTION.fullmatch(lines[-1]):
-        lines.pop()
+    if manifest.risk_class in {"R3", "R4"} and (
+            not lines or not _RISK.fullmatch(lines[-1])):
+        raise CommandStripError("COMMAND_RISK_CLASS_REQUIRED")
     if lines and _RISK.fullmatch(lines[-1]):
         marker = lines.pop()
         if manifest.risk_class not in {"R3", "R4"} or not marker.startswith(
                 "RISK_CLASS=" + manifest.risk_class):
             raise CommandStripError("COMMAND_RISK_MISMATCH")
+    while lines and _ASSUMPTION.fullmatch(lines[-1]):
+        lines.pop()
     if lines and _FENCE_OPEN.fullmatch(lines[0]):
         lines.pop(0)
         if not lines or not _FENCE_CLOSE.fullmatch(lines[-1]):
