@@ -43,7 +43,7 @@ class ToolPolicy:
 REGISTRY: Mapping[str, ToolPolicy] = {
     "asset_inventory.read": ToolPolicy("asset_inventory.read", "R0", 5, 0, 0, False, frozenset()),
     "zap.passive_import": ToolPolicy("zap.passive_import", "R1", 20, 0, 0, False, frozenset()),
-    "nmap.tcp_top20": ToolPolicy("nmap.tcp_top20", "R2", 65, 524288, 65536, True, frozenset()),
+    "nmap.tcp_top20": ToolPolicy("nmap.tcp_top20", "R2", 60, 524288, 65536, True, frozenset()),
     "curl.http_head": ToolPolicy("curl.http_head", "R2", 10, 131072, 32768, True, frozenset({"port"})),
     "http.authenticated_test": ToolPolicy("http.authenticated_test", "R3", 30, 0, 0, True, frozenset()),
     "prohibited.r4": ToolPolicy("prohibited.r4", "R4", 0, 0, 0, False, frozenset()),
