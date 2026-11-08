@@ -50,6 +50,8 @@ class Profile:
     dictionary: str
     max_length: int
     max_format_retries: int
+    command_format_retries: int = 2
+    format_failures: int = 0
 
 
 def _load(name: str) -> dict:
@@ -65,16 +67,25 @@ def get_profile(provider: str) -> Profile:
         raise FramingError("PROVIDER_INVALID")
     config = _load("profiles.yaml")
     record = config["providers"].get(provider.split("/", 1)[0], config["default"])
-    if set(record) != {"level", "dictionary", "max_length", "max_format_retries"}:
+    if set(record) != {"level", "dictionary", "max_length", "max_format_retries",
+                       "command_format_retries", "format_failures"}:
         raise FramingError("PROFILE_SCHEMA_INVALID")
     level, dictionary, limit, retries = (record["level"], record["dictionary"],
                                          record["max_length"], record["max_format_retries"])
+    command_retries = record["command_format_retries"]
+    failures = record["format_failures"]
     lexicon = _load("lexicon.yaml")["dictionaries"]
     if (type(level) is not int or level not in WRAPPERS or type(limit) is not int
             or not 1 <= limit <= 8192 or dictionary not in lexicon
-            or type(retries) is not int or not 0 <= retries <= 1):
+            or type(retries) is not int or not 0 <= retries <= 1
+            or type(command_retries) is not int or not 0 <= command_retries <= 2
+            or type(failures) is not int or not 0 <= failures <= 100000):
         raise FramingError("PROFILE_UNSAFE")
-    return Profile(level, dictionary, limit, retries)
+    # Only format failures can raise the initial command level; safety
+    # refusals are never recorded as format failures or retried.
+    if provider.split("/", 1)[0] != "local" and failures >= 3:
+        level = min(3, level + 1)
+    return Profile(level, dictionary, limit, retries, command_retries, failures)
 
 
 def check_wrapper(level: int, dictionary: str = "neutral") -> None:
