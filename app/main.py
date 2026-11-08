@@ -21,7 +21,7 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 from .knowledge import catalog as knowledge_catalog, content as skill_content, find_skill, select_skills, safe_skill_context
-from .sapper_integration import GraphError, SCRIPT as SAPPER_SCRIPT, initialize_graph, stage_begin, stage_end, public_graph
+from .sapper_integration import GraphError, SCRIPT as SAPPER_SCRIPT, initialize_graph, stage_begin, stage_end, public_graph, resolve_frontier
 
 from .security import (
     assert_no_sensitive_payload, llm_safe_payload, redact, safe_gateway,
@@ -391,6 +391,15 @@ def sapper_graph(eid: str):
     except (GraphError, ValueError):
         return {"engine": "sapper-v2", "enabled": False, "facts": [], "intents": [],
                 "total_facts": 0, "total_intents": 0}
+
+
+@app.get("/api/engagements/{eid}/frontier", dependencies=[Depends(auth)])
+def sapper_frontier(eid: str):
+    fetch_engagement(eid)
+    try:
+        return resolve_frontier(eid, DATA)
+    except (GraphError, ValueError):
+        return {"ready_ids": [], "integrity": "unavailable"}
 
 
 @app.post("/api/privacy-preview", dependencies=[Depends(auth)])
