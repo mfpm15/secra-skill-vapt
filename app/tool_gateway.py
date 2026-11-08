@@ -24,6 +24,7 @@ from pathlib import Path
 from uuid import UUID
 
 from .evidence_vault import EvidenceVault, EvidenceError, _private_dir
+from .gateway.fence import SystemdFence, FenceUnverified
 from .masking import MemoryVault, guard_mask
 from .scope_guard import ScopePolicy, ScopeDenied, authorized_target, enforce_scope_per_connection, fixed_http_url
 from .tool_registry import (HTTP_PORTS, TOP20_TCP, StructuredToolIntent, ToolDenied,
@@ -188,7 +189,9 @@ class ToolGateway:
     def __init__(self, evidence_root: str | Path, *, fence=None):
         self.vault = EvidenceVault(evidence_root)
         self.audit = AuditLedger(self.vault.root)
-        self.fence = fence if fence is not None else DenyNetworkFence()
+        self.fence = (fence if fence is not None else
+                      SystemdFence() if os.getenv("SECRA_FENCE_BACKEND") == "systemd"
+                      else DenyNetworkFence())
         self._active: dict[UUID, int] = {}
         self._asset_locks: dict[str, threading.Lock] = {}
         self._lock = threading.RLock()
@@ -197,6 +200,17 @@ class ToolGateway:
         with self._lock:
             pid = self._active.get(run_id)
         if pid is None:
+            return
+        if isinstance(self.fence, SystemdFence):
+            try:
+                result = subprocess.run(
+                    self.fence.stop(run_id), check=False, timeout=10,
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                    env={"PATH": "/usr/bin:/bin", "LC_ALL": "C", "LANG": "C"})
+                if result.returncode != 0:
+                    raise GatewayError("SYSTEMD_STOP_FAILED")
+            except (OSError, subprocess.TimeoutExpired) as exc:
+                raise GatewayError("SYSTEMD_STOP_FAILED") from exc
             return
         try:
             os.killpg(pid, signal.SIGTERM)
@@ -319,8 +333,11 @@ class ToolGateway:
             # can prove protection. A checkbox or env flag does not authorize it.
             self.fence.require_ready(policy)
             argv = build_fixed_argv(intent, resolved, policy)
-            argv = self.fence.wrap(argv)
-        except (GatewayError, OSError):
+            if isinstance(self.fence, SystemdFence):
+                argv = self.fence.wrap(argv, intent.engagement_id, run_id, policy)
+            else:
+                argv = self.fence.wrap(argv)
+        except (GatewayError, FenceUnverified, OSError):
             self.audit.emit(intent.engagement_id, intent.request_id, run_id,
                             intent.action_id, "FENCE_BLOCKED", policy.version, agent_id=intent.agent_id)
             raise
