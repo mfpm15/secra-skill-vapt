@@ -6,13 +6,11 @@ import os
 import secrets
 import shutil
 import sqlite3
-import subprocess
 import threading
 import time
 import urllib.error
 import urllib.request
 import uuid
-import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Literal
 
@@ -22,6 +20,9 @@ from pydantic import BaseModel, Field
 
 from .knowledge import catalog as knowledge_catalog, content as skill_content, find_skill, select_skills, safe_skill_context
 from .masking import guard_mask, MemoryVault, EgressDeniedError
+from .tool_gateway import ToolGateway
+from .tool_registry import StructuredToolIntent, HTTP_PORTS, ToolDenied
+from .scope_guard import ScopeDenied
 from .framing import (frame, unframe, get_profile, detect, FormatLadder,
                       FramingError)
 from .framing.audit import record_framing, FramingAuditError
@@ -36,6 +37,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA = Path(os.getenv("SECRA_DATA_DIR", str(ROOT / "data")))
 DATA.mkdir(parents=True, exist_ok=True)
 DB = DATA / "secra.sqlite3"
+KALI_GATEWAY = ToolGateway(os.getenv("SECRA_EVIDENCE_DIR", str(DATA / "evidence")))
 TOKEN = os.getenv("SECRA_DASHBOARD_TOKEN") or secrets.token_urlsafe(24)
 if not os.getenv("SECRA_DASHBOARD_TOKEN"):
     print("\n[SECRA] Local dashboard access token: " + TOKEN + "\n", flush=True)
@@ -118,70 +120,36 @@ def service_rows(eid):
         return [dict(r) for r in conn.execute(
             "SELECT port,service,observation FROM services WHERE engagement_id=? ORDER BY port", (eid,))]
 
-def run_argv(args: list[str], seconds: int, stop: threading.Event) -> tuple[int, str]:
-    """Fixed argv only, no shell; terminate subprocess when cancelled or timed out."""
-    proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                            stdin=subprocess.DEVNULL, start_new_session=True)
-    deadline = time.monotonic() + seconds
-    while proc.poll() is None:
-        if stop.is_set() or time.monotonic() > deadline:
-            proc.kill()
-            proc.communicate()
-            raise RuntimeError("Tool cancelled or timed out")
-        time.sleep(0.15)
-    out, err = proc.communicate()
-    return proc.returncode, out[:100000]
+def nmap_scan(target, scope, eid, stop):
+    """The only live Nmap entrypoint: typed gateway intent, never direct Popen."""
+    intent = StructuredToolIntent(uuid.UUID(eid), uuid.uuid4(), "recon",
+                                  "nmap.tcp_top20", target, {})
+    receipt = KALI_GATEWAY.execute(intent, target, scope, stop)
+    if receipt.exit_code != 0:
+        raise RuntimeError("NMAP_NONZERO_EXIT")
+    return KALI_GATEWAY.parse_nmap_receipt(receipt)
 
-def nmap_scan(target, stop):
-    if not shutil.which("nmap"):
-        raise RuntimeError("Nmap tidak ditemukan di PATH; install nmap pada host Kali.")
-    argv = ["nmap", "-sT", "-Pn", "-n", "-T2", "--top-ports", "20",
-            "--max-retries", "1", "--host-timeout", "45s", "-oX", "-", target]
-    code, out = run_argv(argv, 65, stop)
-    if code != 0:
-        raise RuntimeError("Nmap exited with a nonzero status")
-    root = ET.fromstring(out)
-    services = []
-    for p in root.findall(".//port"):
-        state = p.find("state")
-        if state is not None and state.get("state") == "open":
-            port = int(p.get("portid", "0"))
-            if 0 < port <= 65535:
-                services.append({"port": port, "service": {
-                    80: "http", 443: "https", 22: "ssh", 25: "smtp", 21: "ftp",
-                    53: "domain", 3306: "mysql", 5432: "postgresql",
-                    445: "microsoft-ds", 3389: "ms-wbt-server",
-                    8080: "http", 8443: "https",
-                }.get(port, "unknown")})
-    return services
 
-HTTP_PORTS = {80, 443, 8000, 8008, 8080, 8081, 8443, 8888, 3000, 5000, 9443}
-HTTPS_PORTS = {443, 8443, 9443}
-
-def probe_http(target, services, stop):
-    if not shutil.which("curl"):
-        return ["curl unavailable; skipped HTTP header review"]
+def probe_http(target, scope, eid, services, stop):
+    """Fixed curl HEAD adapter; raw HTTP headers remain in encrypted local evidence."""
     notes = []
     for item in services:
         port = item["port"]
         if port not in HTTP_PORTS:
             continue
-        scheme = "https" if port in HTTPS_PORTS else "http"
-        url = scheme + "://" + target + ":" + str(port) + "/"
-        args = ["curl", "--noproxy", "*", "--proto", "=http,https",
-                "--max-redirs", "0", "--connect-timeout", "3",
-                "--max-time", "7", "-k", "-sS", "-I", url]
+        if stop.is_set():
+            break
+        intent = StructuredToolIntent(uuid.UUID(eid), uuid.uuid4(), "http_analyst",
+                                      "curl.http_head", target, {"port": port})
         try:
-            code, response = run_argv(args, 10, stop)
-            first = response.splitlines()[0][:90] if response.splitlines() else ""
-            # Do not retain raw server headers or responses.
-            status = next((tok for tok in first.split() if len(tok) == 3 and tok.isdigit()), "unknown")
-            notes.append("Port " + str(port) + ": HTTP status " + status if code == 0 else
-                         "Port " + str(port) + ": HTTP probe failed")
-        except RuntimeError:
-            notes.append("Port " + str(port) + ": HTTP probe interrupted")
+            receipt = KALI_GATEWAY.execute(intent, target, scope, stop)
+            status = KALI_GATEWAY.parse_http_receipt(receipt)
+            notes.append("Port " + str(port) + ": HTTP status " + status)
+        except (RuntimeError, ScopeDenied, ToolDenied) as exc:
             if stop.is_set():
-                break
+                raise InterruptedError() from exc
+            # Never emit a successful assessment after the gateway denied an action.
+            raise RuntimeError("HTTP_GATEWAY_FAILED") from exc
     return notes
 
 LLM_SYSTEM_PREFIX = (
@@ -359,12 +327,14 @@ def pipeline(eid, stop):
             event(eid, "Recon Agent", "completed", "SIMULATED: three services in demo dataset.")
         else:
             try:
-                services = nmap_scan(entry["target"], stop)
+                services = nmap_scan(entry["target"], entry["scope"], eid, stop)
                 event(eid, "Recon Agent", "completed",
                       "Nmap completed: " + str(len(services)) + " open services in top 20 TCP ports.")
-            except (RuntimeError, ET.ParseError) as exc:
+            except (RuntimeError, ScopeDenied, ToolDenied) as exc:
                 event(eid, "Recon Agent", "error", str(exc))
-                notes.append("Recon unavailable or incomplete.")
+                if stop.is_set():
+                    raise InterruptedError() from exc
+                raise RuntimeError("RECON_GATEWAY_FAILED") from exc
         save_services(eid, services, demo)
         graph_close("Recon Agent", recon_intent, "Recon stage completed with " + str(len(services)) + " reported service ports")
         if stop.is_set():
@@ -375,7 +345,7 @@ def pipeline(eid, stop):
             time.sleep(0.35)
             notes.append("SIMULATED HTTP status 200 on ports 80 and 443.")
         else:
-            notes.extend(probe_http(entry["target"], services, stop))
+            notes.extend(probe_http(entry["target"], entry["scope"], eid, services, stop))
         for message in notes:
             event(eid, "HTTP Analyst", "note", message)
         event(eid, "HTTP Analyst", "completed", "HTTP stage finished.")
@@ -442,6 +412,7 @@ def dashboard():
 def health():
     return {"status": "ok", "available_tools": {t: bool(shutil.which(t)) for t in ("nmap", "curl")},
             "gateway_configured": bool(LLM_KEY), "mode": "local-only",
+            "kali_gateway": "live-network-denied-until-os-fence-verified",
             "knowledge_skill_count": len(knowledge_catalog()),
             "sapper_v2_present": SAPPER_SCRIPT.is_file()}
 

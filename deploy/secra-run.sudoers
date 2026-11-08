@@ -1,0 +1,11 @@
+# Install root:root 0440 in /etc/sudoers.d/secra-run
+# Validated by root-owned /usr/local/sbin/secra-run; no sudo permission
+# for nmap, curl, systemctl, systemd-run, shells or arbitrary programs.
+# Wildcards constrain the entrypoint only; the helper STRICTLY validates UUIDs,
+# fixed argv, root-owned manifests, executable digest and scope.
+Defaults!/usr/local/sbin/secra-run env_reset
+Defaults!/usr/local/sbin/secra-run secure_path=/usr/sbin:/usr/bin:/sbin:/bin
+Cmnd_Alias SECRA_NMAP = /usr/local/sbin/secra-run exec --engagement * --run * -- /usr/bin/nmap *
+Cmnd_Alias SECRA_CURL = /usr/local/sbin/secra-run exec --engagement * --run * -- /usr/bin/curl *
+Cmnd_Alias SECRA_STOP = /usr/local/sbin/secra-run stop --run *
+secra-api ALL=(root) NOPASSWD:NOSETENV: SECRA_NMAP, SECRA_CURL, SECRA_STOP
