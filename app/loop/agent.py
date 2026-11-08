@@ -147,6 +147,14 @@ class AgentLoop:
             if tool.name == "demo.nmap_scan":
                 observations = [{"port": 80, "service": "http"},
                                 {"port": 443, "service": "https"}]
+            elif tool.name == "nmap.tcp_top20":
+                observations = [
+                    {"port": x["port"], "service": x["service"]}
+                    for x in result.get("observations", [])
+                    if isinstance(x, dict) and x.get("state") == "open"
+                    and type(x.get("port")) is int
+                    and isinstance(x.get("service"), str)
+                ][:30]
             if self.store.is_stopped(task_id):
                 return LoopResult(task_id, "stopped", step_count, receipts)
         return finish("exhausted", "Task exhausted: maximum " + str(self.max_steps) +
