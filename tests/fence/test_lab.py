@@ -206,6 +206,11 @@ def _kill_case(after_seconds=0.3):
                 break
             time.sleep(0.1)
         assert not remaining, "SYSTEMD_STOP_LEFT_DESCENDANTS"
+        # Independent process-table witness, not only systemctl status.
+        pgrep = subprocess.run(["/usr/bin/pgrep", "-f", unit],
+                               capture_output=True, timeout=5)
+        assert pgrep.returncode == 1, "PGREP_DETECTED_SURVIVING_DESCENDANT"
+        outcome["pgrep_exit"] = pgrep.returncode
         outcome["observed_descendant_count"] = len(pids)
         outcome["remaining_pids"] = len(remaining)
         return outcome
