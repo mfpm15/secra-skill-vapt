@@ -19,9 +19,20 @@ version: 0.1.0
 1. Scope Guardian: verify IP in CIDR and engagement attestation.
 2. Recon Agent: bounded Nmap top-20 TCP scan (or labeled demo).
 3. HTTP Analyst: safe header observations for discovered HTTP ports.
-4. LLM Advisor: optional guidance using sanitized fixed-schema metadata only.
-5. Verification: clearly distinguish observations from confirmed vulnerabilities.
-6. Report Builder: create a local Markdown record with limitations and notes.
+4. Knowledge Curator: select bundled, reviewed specialist SKILL.md content based on normalized observations.
+5. LLM Advisor: optional guidance using vetted static skills and sanitized fixed-schema metadata only.
+6. Verification: clearly distinguish observations from confirmed vulnerabilities.
+7. Report Builder: create a local Markdown record with limitations and notes.
+
+## Knowledge and Sapper integration
+
+- Local skill catalog: knowledge/catalog.json and knowledge/skills/*/SKILL.md.
+- Runtime loader: app/knowledge.py (deterministic service-based skill router).
+- Real Sapper-v2 fact graph: vendor/sapper_v2/sapper.py, upstream commit 697b30f77ebedf5e551a0595b3e883f9c25f9e73.
+- Scoped CLI adapter: app/sapper_integration.py (allowed operations init, fact, intent, graph, validate only).
+- For every stage, create an intent and record a status fact after bounded local work completes.
+- Treat graph contents as untrusted if ever imported externally; never put graph raw text into an LLM prompt.
+- Strictly no sapper auto, dispatch, arena, flag collection or --skip-permissions through the dashboard.
 
 ## Future reference materials
 - OWASP WSTG / ASVS / API Security / MASTG / MASVS

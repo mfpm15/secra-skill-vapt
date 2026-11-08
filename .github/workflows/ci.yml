@@ -15,9 +15,9 @@ jobs:
           python-version: "3.12"
       - name: Install dependencies
         run: python -m pip install -r requirements-dev.txt
-      - name: Compile Python
-        run: python -m compileall -q app
-      - name: Test safety and demo lifecycle
+      - name: Compile Python and pinned Sapper-v2
+        run: python -m compileall -q app vendor/sapper_v2
+      - name: Test scope, privacy, knowledge, Sapper graph and demo lifecycle
         env:
           SECRA_DASHBOARD_TOKEN: ci-test-token-only
           SECRA_DATA_DIR: /tmp/secra-vapt-test
