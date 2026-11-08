@@ -73,9 +73,11 @@ def test_unit_argv_full_deny_both_families_and_no_dns_exception(tmp_path, monkey
     eid, rid = str(uuid4()), str(uuid4())
     work = tmp_path / "work"
     (work / eid).mkdir(parents=True)
+    evidence = tmp_path / "evidence"
+    evidence.mkdir(mode=0o700)
     monkeypatch.setitem(helper["systemd_argv"].__globals__, "check_directory", lambda p: None)
     monkeypatch.setitem(helper["systemd_argv"].__globals__, "WORK", work)
-    monkeypatch.setitem(helper["systemd_argv"].__globals__, "EVIDENCE", tmp_path / "evidence")
+    monkeypatch.setitem(helper["systemd_argv"].__globals__, "EVIDENCE", evidence)
     monkeypatch.setattr(pwd, "getpwnam", lambda user: types.SimpleNamespace(pw_uid=os.getuid()))
     binary = ["/usr/bin/nmap", *helper["NMAP_FIXED"], "192.0.2.10"]
     args = helper["systemd_argv"](eid, rid, binary, {"target": "192.0.2.10"})
