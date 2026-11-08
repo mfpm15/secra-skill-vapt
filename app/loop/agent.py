@@ -66,7 +66,7 @@ class AgentLoop:
             raise TaskError("LOOP_TASK_NOT_RUNNING")
         profile = load_profile(specialist)
         llm = model or (
-            FakeDemoModel() if task["mode"] == "demo" else
+            FakeDemoModel() if task["mode"] == "demo" and not task["model"] else
             NineRouterPlanner(task["model"]))
         stopper = stop or threading.Event()
         started = time.monotonic()
