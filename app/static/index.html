@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SECRA — VAPT Operations</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#e9f1ff;background:#080d19;font-size:14px}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 70% -15%,#142342,transparent 50%),#080d19}
+button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.5;cursor:not-allowed}
+.shell{display:grid;grid-template-columns:244px 1fr;min-height:100vh}.side{background:#0b1221;border-right:1px solid #1d2a42;padding:28px 17px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:12px;padding:0 12px 32px;font-size:21px;font-weight:800;letter-spacing:1px}.brand-logo{width:35px;height:35px;border-radius:11px;background:linear-gradient(135deg,#7dfad4,#3b85ff);display:grid;place-items:center;color:#0b2133;font-weight:1000;font-size:21px;box-shadow:0 0 35px #36c8db33}
+.brand small{font-size:9px;display:block;color:#7893b3;font-weight:650;letter-spacing:2.3px;margin-top:2px}.side-label{color:#65819e;font-size:10px;font-weight:800;letter-spacing:1.6px;margin:10px 13px}
+.nav{border-radius:11px;color:#99adc8;padding:12px 13px;display:flex;align-items:center;gap:12px;margin-bottom:5px;border:1px solid transparent;text-decoration:none}
+.nav.active{background:#14243c;border-color:#224366;color:#88f8d6;font-weight:750}.nav svg{width:18px;height:18px}
+.side-projects{margin-top:22px;min-height:0;overflow:auto}.side-project{display:block;width:100%;padding:11px 12px;background:transparent;border:0;border-radius:9px;color:#8fa6c3;text-align:left;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side-project.selected,.side-project:hover{background:#17253d;color:white}
+.side-foot{margin-top:auto;border:1px solid #253957;background:#111b30;border-radius:14px;padding:14px}.dot{display:inline-block;height:7px;width:7px;background:#48d8a3;border-radius:50%;box-shadow:0 0 12px #48d8a380;margin-right:7px}.hint{color:#7892ae;font-size:11px;line-height:1.65}
+.main{padding:29px 37px 55px;min-width:0;max-width:1640px;width:100%;margin:0 auto}
+.top{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:31px}.eyebrow{font-size:11px;letter-spacing:2.1px;color:#71deb9;font-weight:800}.top-right{display:flex;gap:10px;align-items:center}.pill{border:1px solid #28445b;background:#15283a;border-radius:30px;padding:8px 12px;color:#a8c0d7;font-size:11px}
+.title{margin:8px 0 8px;font-size:clamp(25px,3vw,36px);font-weight:760;letter-spacing:-1.2px}.subtitle{margin:0;color:#859bb8;font-size:13px;line-height:1.6}
+.hero{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;gap:18px}.hero-badge{padding:14px 16px;border:1px solid #25465c;background:#11283b;border-radius:14px;display:flex;align-items:center;gap:12px;color:#adebd6;font-size:12px}.hero-badge b{display:block;font-size:15px;color:white;margin-bottom:3px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:25px}.kpi{background:linear-gradient(140deg,#141f34,#10192c);border:1px solid #21314a;border-radius:15px;padding:18px 20px;min-height:101px}.kpi label{display:block;color:#7e9aba;font-size:11px;font-weight:650;margin-bottom:14px}.kpi strong{font-size:27px;letter-spacing:-1px;font-weight:750}.kpi .accent{color:#75efd4}.kpi small{float:right;color:#64829d;font-size:10px}
+.columns{display:grid;grid-template-columns:minmax(310px,0.92fr) minmax(380px,1.34fr);gap:17px;margin-bottom:17px}.card{background:#101a2b;border:1px solid #22334a;border-radius:17px;padding:21px;min-width:0;box-shadow:0 16px 34px #04091818}.card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:18px}.card h2{margin:0;font-size:15px;letter-spacing:-.2px}.card-note{font-size:10px;color:#8098b6}.tag{background:#162e36;color:#89f1d2;font-size:10px;border-radius:7px;padding:5px 9px;white-space:nowrap}.tag.blue{background:#182b49;color:#8bbaff}.tag.amber{background:#40301e;color:#f1bf74}
+.field{margin-bottom:15px}.field label{display:block;margin-bottom:8px;font-size:11px;font-weight:650;color:#a8bed7}.control{display:block;width:100%;color:#dcecff;background:#0a1424;border:1px solid #2a3b56;border-radius:9px;padding:11px 12px;outline:none;min-height:41px}
+.control:focus{border-color:#53c2c5;box-shadow:0 0 0 2px #3bd1c520}.control::placeholder{color:#526881}.flexrow{display:flex;gap:11px}.flexrow .field{flex:1;min-width:0}.help{color:#7089a6;font-size:10px;line-height:1.5;margin-top:6px}.check{display:flex;gap:9px;align-items:start;color:#a7bad1;font-size:11px;line-height:1.55;margin-bottom:14px}.check input{accent-color:#6aebcb;margin-top:3px}
+.btn{border:1px solid #36506c;border-radius:9px;color:#d9e9ff;background:#17263e;padding:11px 15px;font-weight:730;font-size:12px;transition:filter .15s}.btn:hover{filter:brightness(1.15)}.btn.primary{background:linear-gradient(100deg,#68edca,#80cbff);color:#0d2837;border:none}.btn.danger{background:#351c2c;border-color:#783b53;color:#ffabc0}.btn.full{width:100%}.btn.slim{padding:7px 11px;font-size:11px}
+.status-banner{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px;background:#0a1526;border:1px solid #263a51;border-radius:11px;margin-bottom:18px}.status-banner b{display:block;font-size:12px}.status-banner span{color:#7f9ab5;font-size:10px;display:block;margin-top:4px}
+.progress-head{display:flex;justify-content:space-between;font-size:11px;color:#a7c0d4;margin-bottom:8px}.progress{height:6px;border-radius:10px;background:#23334a;overflow:hidden;margin-bottom:20px}.progress>div{height:100%;width:0;background:linear-gradient(90deg,#48dfc0,#6d9fff);transition:width .4s}
+.agents{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.agent{border:1px solid #263750;border-radius:11px;padding:12px;display:flex;gap:10px;align-items:center;background:#0c1626}.agent-icon{height:32px;width:32px;flex:0 0 32px;display:grid;place-items:center;border-radius:9px;background:#172a42;color:#8eabc8}.agent-info{min-width:0}.agent b{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.agent small{color:#68829d;font-size:10px}.agent.running{border-color:#3e867f;background:#10292e}.agent.running .agent-icon{background:#184d4b;color:#85f5d7;animation:pulse 1.5s infinite}.agent.completed .agent-icon{background:#163a31;color:#77edb5}.agent.error .agent-icon{background:#41222b;color:#ff9a9a}
+@keyframes pulse{50%{box-shadow:0 0 0 5px #62ddbe16}}
+.bottom{display:grid;grid-template-columns:minmax(430px,1.4fr) minmax(290px,1fr);gap:17px}.terminal{background:#070e1a;border:1px solid #263449;border-radius:11px;height:300px;overflow:auto;padding:13px;color:#adc6d7;font:11px/1.75 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere}.log-line{padding:2px 0;border-bottom:1px solid #102034}.log-time{color:#5e8098}.log-agent{color:#79c6f0}.log-level.completed{color:#67e7b2}.log-level.error,.log-level.warning{color:#ff999d}.empty{color:#5e7892;text-align:center;padding:60px 12px;line-height:1.6}
+.service-grid{display:flex;flex-wrap:wrap;gap:8px;min-height:62px;align-content:start}.service-chip{background:#122d3a;border:1px solid #295365;color:#9dd9e5;border-radius:8px;padding:9px 11px;font-size:11px}.service-chip b{color:white}.separator{height:1px;background:#24354c;margin:19px 0}
+.toast{position:fixed;right:25px;bottom:24px;z-index:40;background:#19364a;color:#e1f5ff;border:1px solid #438e91;padding:13px 17px;box-shadow:0 18px 45px #0008;border-radius:11px;max-width:410px;display:none}
+.lock{position:fixed;inset:0;background:#060b15eF;z-index:50;display:grid;place-items:center;padding:20px}.lock-panel{background:#101d30;border:1px solid #2a435f;border-radius:18px;width:min(440px,100%);padding:30px}.lock-panel h2{font-size:25px;margin:15px 0 8px}.lock-panel p{font-size:12px;line-height:1.7;color:#9eb4cd}
+.footer{margin-top:24px;color:#5d7694;font-size:10px;text-align:center}
+@media(max-width:1100px){.columns,.bottom{grid-template-columns:1fr}.shell{grid-template-columns:195px 1fr}.main{padding:23px}.hero-badge{display:none}}
+@media(max-width:700px){.shell{display:block}.side{height:auto;position:static;padding:15px;display:block}.brand{padding:0}.nav,.side-label,.side-projects,.side-foot{display:none}.main{padding:19px}.kpis{grid-template-columns:repeat(2,1fr)}.agents{grid-template-columns:1fr}.hero{margin:14px 0 21px}.top{margin-bottom:15px}.columns,.bottom{display:block}.card{margin-bottom:13px}.flexrow{display:block}}
+</style>
+</head>
+<body>
+<div id="authLayer" class="lock">
+  <div class="lock-panel"><div class="brand-logo">S</div><h2>SECRA Operations</h2>
+  <p>Dashboard lokal yang memerlukan access token. Token ditampilkan pada terminal saat server dimulai, atau atur melalui <strong>SECRA_DASHBOARD_TOKEN</strong>.</p>
+  <div class="field"><label for="accessToken">Access token</label><input id="accessToken" class="control" type="password" placeholder="Masukkan token dari terminal"></div>
+  <button id="unlock" class="btn primary full">Unlock workspace</button><p id="unlockMessage" class="help"></p></div>
+</div>
+<div class="shell">
+ <aside class="side">
+  <div class="brand"><span class="brand-logo">S</span><span>SECRA<small>VAPT OPERATIONS</small></span></div>
+  <div class="side-label">WORKSPACE</div>
+  <div class="nav active"><span>◈</span> Operations Center</div><div class="nav"><span>▦</span> Assessment Monitor</div><div class="nav"><span>▤</span> Evidence & Reports</div>
+  <div class="side-projects"><div class="side-label">ENGAGEMENTS</div><div id="projects"></div></div>
+  <div class="side-foot"><div><span class="dot"></span><strong style="font-size:11px">Local-first security</strong></div><p class="hint" style="margin-bottom:0">LLM hanya menerima metadata layanan yang diizinkan. Eksekusi tools tetap di mesin lokal.</p></div>
+ </aside>
+ <main class="main">
+  <header class="top"><div class="eyebrow">SECURITY OPERATIONS / COMMAND CENTER</div><div class="top-right"><span class="pill">● LOCAL CONSOLE</span><button id="refresh" class="btn slim">↻ Refresh</button></div></header>
+  <div class="hero"><div><h1 class="title">VAPT Command Center<span style="color:#73e3c3">.</span></h1><p class="subtitle">Kelola scope, pantau aktivitas agent, dan kumpulkan evidence assessment dari satu tempat.</p></div><div class="hero-badge"><span style="font-size:23px">⬡</span><div><b>Human-governed AI</b>Scoped execution · masked LLM context</div></div></div>
+  <section class="kpis">
+    <div class="kpi"><label>Total Engagements</label><strong id="metricTotal">0</strong><small>workspace</small></div>
+    <div class="kpi"><label>Active Assessments</label><strong id="metricRunning" class="accent">0</strong><small>live</small></div>
+    <div class="kpi"><label>Completed</label><strong id="metricComplete">0</strong><small>sessions</small></div>
+    <div class="kpi"><label>Open Services</label><strong id="metricServices">0</strong><small>current target</small></div>
+  </section>
+  <section class="columns">
+   <article class="card">
+    <div class="card-head"><h2>✦ New Engagement</h2><span class="tag">SCOPE CONTROL</span></div>
+    <form id="form">
+     <div class="field"><label for="name">Nama assessment</label><input class="control" id="name" maxlength="100" required minlength="3" placeholder="Contoh: Internal Web Assessment Q4"></div>
+     <div class="flexrow"><div class="field"><label for="target">Target IP</label><input class="control" id="target" placeholder="192.0.2.10" required></div><div class="field"><label for="mode">Execution mode</label><select class="control" id="mode"><option value="demo">Demo (simulasi)</option><option value="live">Live (tool Kali)</option></select></div></div>
+     <div class="field"><label for="scope">Authorized scope (IP / CIDR)</label><textarea class="control" rows="2" id="scope" placeholder="192.0.2.0/24" required></textarea><div class="help">Wajib mencakup IP target. Hanya satu IP diuji per engagement pada MVP.</div></div>
+     <div class="field"><label for="model">Model via 9Router (opsional)</label><input list="modelOptions" id="model" class="control" placeholder="Pilih dari daftar atau masukkan model ID"><datalist id="modelOptions"></datalist><div class="help"><span id="modelStatus">Mengambil model dari 9Router...</span> · Tidak ada raw tool log dikirim ke LLM.</div></div>
+     <label class="check"><input id="authorized" type="checkbox" required><span>Saya memastikan scope ini telah mendapatkan izin pengujian tertulis, dan memahami bahwa mode Live akan mengirim traffic ke IP target.</span></label>
+     <button id="launch" type="submit" class="btn primary full">▶ Create & Launch Assessment</button>
+     <div id="formMessage" class="help" style="margin-top:10px"></div>
+    </form>
+   </article>
+   <article class="card">
+    <div class="card-head"><h2>◈ Agent Execution Monitor</h2><span class="tag blue" id="monitorBadge">IDLE</span></div>
+    <div class="status-banner"><div><b id="currentName">No active engagement</b><span id="currentTarget">Buat engagement untuk memulai assessment.</span></div><button id="cancel" class="btn danger slim" disabled>Stop</button></div>
+    <div class="progress-head"><span>Assessment pipeline</span><span id="progressValue">0 / 6 agents</span></div><div class="progress"><div id="progressBar"></div></div>
+    <div id="agents" class="agents"></div>
+    <div class="separator"></div>
+    <div class="card-head" style="margin-bottom:10px"><h2>⎔ Privacy boundary</h2><span class="tag">ALLOWLIST</span></div>
+    <p class="hint">Alamat IP asli, credential, raw HTTP response, banner, dan isi evidence tetap lokal. LLM hanya menerima alias aset serta metadata port/service terbatas. Fitur ini <strong>tidak</strong> menjamin anonimitas untuk seluruh data di luar payload tersebut.</p>
+    <div class="flexrow"><input class="control" style="flex:1;min-width:0" id="privacyInput" placeholder="Coba: admin@company.com 192.0.2.10 token=abc123"><button class="btn slim" id="preview" type="button">Test masking</button></div>
+    <p class="help" id="previewResult"></p>
+   </article>
+  </section>
+  <section class="bottom">
+   <article class="card">
+    <div class="card-head"><h2>⌘ Live Execution Log</h2><span class="tag blue" id="eventCounter">0 EVENTS</span></div>
+    <div class="terminal" id="logs"><div class="empty">Menunggu event dari assessment.<br>Semua log UI dimasking sebelum disimpan.</div></div>
+   </article>
+   <article class="card">
+    <div class="card-head"><h2>◇ Discovered Services</h2><span class="card-note" id="serviceMode">Nmap evidence</span></div>
+    <div class="service-grid" id="services"><span class="hint">Belum ada hasil discovery.</span></div>
+    <div class="separator"></div>
+    <div class="card-head" style="margin-bottom:10px"><h2>Assessment Deliverables</h2><span class="tag">LOCAL</span></div>
+    <p class="hint">Hasil discovery adalah observasi, bukan kerentanan terverifikasi. Report mencatat keterbatasan assessment dan hasil verifikasi.</p>
+    <button id="download" class="btn full" disabled>↓ Download Markdown Report</button>
+   </article>
+  </section>
+  <p class="footer">SECRA VAPT MVP · Scope enforced by backend · No uncontrolled tool commands · Local-only deployment</p>
+ </main>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+(function(){
+'use strict';
+var token=sessionStorage.getItem('secra_token')||'';
+var active='', entries=[], latest=0, logs=[], isPolling=false;
+var agents=['Scope Guardian','Recon Agent','HTTP Analyst','LLM Advisor','Verification','Report Builder'];
+var agentIcons=['▣','⌁','◉','✳','✓','▤'];
+var $=function(id){return document.getElementById(id)};
+function notify(message){$('toast').textContent=message;$('toast').style.display='block';setTimeout(function(){$('toast').style.display='none'},4800)}
+async function api(path,options){options=options||{};var headers={'X-Secra-Token':token};if(options.body)headers['Content-Type']='application/json';var response=await fetch('/api'+path,{method:options.method||'GET',headers:headers,body:options.body?JSON.stringify(options.body):undefined,cache:'no-store'});if(response.status===401){$('authLayer').style.display='grid';throw Error('Access token tidak valid')};if(!response.ok){var error=await response.json().catch(function(){return{detail:'HTTP '+response.status}});throw Error(typeof error.detail==='string'?error.detail:'Request failed')};return await response.json()}
+function esc(value){var e=document.createElement('span');e.textContent=String(value);return e.innerHTML}
+async function unlock(){token=$('accessToken').value.trim();try{await api('/health');sessionStorage.setItem('secra_token',token);$('authLayer').style.display='none';await refreshAll()}catch(e){$('unlockMessage').textContent=e.message}}
+$('unlock').onclick=unlock;$('accessToken').addEventListener('keydown',function(e){if(e.key==='Enter')unlock()});
+function paintList(){var list=$('projects');list.replaceChildren();entries.forEach(function(e){var b=document.createElement('button');b.className='side-project'+(e.id===active?' selected':'');b.textContent=(e.status==='running'?'● ':'○ ')+e.name;b.onclick=function(){select(e.id)};list.appendChild(b)});$('metricTotal').textContent=entries.length;$('metricRunning').textContent=entries.filter(function(e){return e.status==='running'}).length;$('metricComplete').textContent=entries.filter(function(e){return e.status==='completed'}).length}
+async function loadList(){entries=await api('/engagements');paintList()}
+async function models(){var result=await api('/models');$('modelStatus').textContent=result.status==='connected'?(result.models.length+' model tersedia'):'9Router: '+result.status;$('modelOptions').replaceChildren();result.models.forEach(function(m){var o=document.createElement('option');o.value=m;$('modelOptions').appendChild(o)})}
+async function select(id){active=id;latest=0;logs=[];$('logs').replaceChildren();paintList();await poll()}
+function paintAgents(events){var states={};agents.forEach(function(a){states[a]='idle'});events.forEach(function(e){if(states[e.agent]!==undefined){if(e.level==='running'||e.level==='completed'||e.level==='error'){states[e.agent]=e.level}}});var done=agents.filter(function(a){return states[a]==='completed'}).length;$('progressValue').textContent=done+' / 6 agents';$('progressBar').style.width=(done/6*100)+'%';var grid=$('agents');grid.replaceChildren();agents.forEach(function(a,i){var item=document.createElement('div');item.className='agent '+states[a];var status=states[a]==='idle'?'Waiting':states[a]==='running'?'Running...':states[a]==='completed'?'Completed':'Error';item.innerHTML='<div class="agent-icon">'+agentIcons[i]+'</div><div class="agent-info"><b>'+esc(a)+'</b><small>'+status+'</small></div>';grid.appendChild(item)})}
+function paintLogs(){var box=$('logs');box.replaceChildren();if(!logs.length){box.innerHTML='<div class="empty">No events yet.</div>';return}logs.slice(-160).forEach(function(e){var line=document.createElement('div');line.className='log-line';var stamp=(e.stamp||'').slice(11,19);line.innerHTML='<span class="log-time">['+esc(stamp)+']</span> <span class="log-agent">'+esc(e.agent)+'</span> <span class="log-level '+esc(e.level)+'">'+esc(e.level)+'</span> '+esc(e.message);box.appendChild(line)});box.scrollTop=box.scrollHeight;$('eventCounter').textContent=logs.length+' EVENTS'}
+async function poll(){if(!active||isPolling)return;isPolling=true;try{var result=await Promise.all([api('/engagements/'+active),api('/engagements/'+active+'/events?after='+latest)]);var entry=result[0],newEvents=result[1];newEvents.forEach(function(e){logs.push(e);latest=Math.max(latest,e.id)});if(logs.length>500)logs=logs.slice(-500);$('currentName').textContent=entry.name;$('currentTarget').textContent=entry.target+' · '+entry.mode.toUpperCase()+' · '+entry.status;$('monitorBadge').textContent=entry.status.toUpperCase();$('monitorBadge').className='tag '+(entry.status==='running'?'':'blue');$('metricServices').textContent=entry.services.length;$('cancel').disabled=entry.status!=='running';$('download').disabled=!entry.report;$('serviceMode').textContent=entry.mode==='demo'?'SIMULATED DATA':'Nmap observation';var sg=$('services');sg.replaceChildren();entry.services.forEach(function(s){var chip=document.createElement('span');chip.className='service-chip';chip.innerHTML='<b>:'+esc(s.port)+'</b> · '+esc(s.service);sg.appendChild(chip)});if(!entry.services.length)sg.innerHTML='<span class="hint">Belum ada hasil discovery.</span>';paintAgents(logs);paintLogs();if(entry.status!=='running'){await loadList()}}catch(e){notify(e.message)}finally{isPolling=false}}
+async function refreshAll(){await loadList();await models();if(active)await poll();else if(entries.length)await select(entries[0].id);else paintAgents([])}
+$('form').onsubmit=async function(e){e.preventDefault();$('launch').disabled=true;$('formMessage').textContent='Membuat engagement...';try{var body={name:$('name').value,target:$('target').value.trim(),scope:$('scope').value,mode:$('mode').value,model:$('model').value.trim(),authorized:$('authorized').checked};var created=await api('/engagements',{method:'POST',body:body});await api('/engagements/'+created.id+'/start',{method:'POST'});$('formMessage').textContent='Assessment dimulai. Pantau status agent di panel sebelah.';await loadList();await select(created.id)}catch(err){$('formMessage').textContent=err.message;notify(err.message)}finally{$('launch').disabled=false}};
+$('cancel').onclick=async function(){if(!active)return;try{await api('/engagements/'+active+'/cancel',{method:'POST'});notify('Perintah stop dikirim ke worker')}catch(e){notify(e.message)}};
+$('preview').onclick=async function(){try{var r=await api('/privacy-preview',{method:'POST',body:{text:$('privacyInput').value}});$('previewResult').textContent=r.masked}catch(e){notify(e.message)}};
+$('download').onclick=async function(){if(!active)return;try{var r=await fetch('/api/engagements/'+active+'/report',{headers:{'X-Secra-Token':token}});if(!r.ok)throw Error('Report not ready');var blob=await r.blob(),a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download='secra-vapt-'+active.slice(0,8)+'.md';a.click();URL.revokeObjectURL(url)}catch(e){notify(e.message)}};
+$('refresh').onclick=refreshAll;
+paintAgents([]);if(token){$('accessToken').value=token;unlock()}else $('authLayer').style.display='grid';
+setInterval(function(){if(token&&active)poll()},1350);setInterval(function(){if(token)loadList().catch(function(){})},9000);
+})();
+</script>
+</body></html>
