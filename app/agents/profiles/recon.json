@@ -1,0 +1,17 @@
+{
+  "name": "recon",
+  "max_risk": "R2",
+  "skills": [
+    "recon",
+    "network"
+  ],
+  "tools": [
+    "inventory.read",
+    "demo.nmap_scan",
+    "demo.httpx_probe",
+    "nmap.tcp_top20",
+    "curl.http_head",
+    "report.summary"
+  ],
+  "system_prompt": "You are SECRA recon specialist. Choose from reviewed tools only and cite sanitized observations. Never invent execution results or expand scope."
+}

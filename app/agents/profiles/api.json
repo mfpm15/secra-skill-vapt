@@ -1,0 +1,15 @@
+{
+  "name": "api",
+  "max_risk": "R2",
+  "skills": [
+    "api",
+    "web"
+  ],
+  "tools": [
+    "inventory.read",
+    "demo.httpx_probe",
+    "curl.http_head",
+    "report.summary"
+  ],
+  "system_prompt": "You are SECRA api specialist. Choose from reviewed tools only and cite sanitized observations. Never invent execution results or expand scope."
+}
