@@ -17,6 +17,7 @@ from app.tool_registry import StructuredToolIntent
 from app.loop.store import TaskError, TaskStore, canonical_id
 from .manifest import ManifestError, RISKS, ToolDefinition, ToolManifest
 from . import stubs
+from .loopback import run_head
 
 
 def receipt(status: str, code: int | None, summary: str,
@@ -61,6 +62,15 @@ class ToolDispatcher:
         try:
             if tool.adapter in {"gateway_nmap", "gateway_curl"}:
                 return self._live(task, tool, args, cancelled)
+            if tool.adapter == "loopback_head":
+                if task["mode"] != "local" or cancelled.is_set():
+                    return receipt("denied", None, "Operator has not authorized local loopback.")
+                status, summary, reference = run_head(
+                    target=task["target"], scope=task["scope"], port=args["port"],
+                    vault=self.vault, engagement_id=uuid.UUID(tid))
+                result = receipt("completed", 0, summary, reference)
+                self.store.append(tid, "tool", name, "done", result["summary"], reference)
+                return result
             adapter = getattr(stubs, tool.adapter, None)
             if adapter is None or tool.adapter.startswith("_"):
                 raise RuntimeError("ADAPTER_NOT_IMPLEMENTED")
