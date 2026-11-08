@@ -15,6 +15,7 @@ import stat
 from pathlib import Path
 from uuid import UUID
 
+from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 
@@ -39,13 +40,15 @@ def _private_dir(path: Path) -> None:
     os.chmod(path, 0o700)
 
 
-def _keyfile(path: Path) -> bytes:
+def _keyfile(path: Path, *, create: bool = False) -> bytes:
     if path.is_symlink():
         raise EvidenceError("EVIDENCE_KEY_UNSAFE")
-    try:
-        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-    except FileExistsError:
-        fd = None
+    fd = None
+    if create:
+        try:
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        except FileExistsError:
+            fd = None
     if fd is not None:
         try:
             key = AESGCM.generate_key(bit_length=256)
@@ -87,7 +90,7 @@ class EvidenceVault:
 
     def begin(self, engagement_id: UUID, run_id: UUID) -> "EvidenceWriter":
         key_path, record_path = self._paths(engagement_id, run_id)
-        key = _keyfile(key_path)
+        key = _keyfile(key_path, create=True)
         return EvidenceWriter(record_path, key, engagement_id, run_id)
 
     def verify_and_read(self, engagement_id: UUID, run_id: UUID) -> dict[str, bytes]:
@@ -137,7 +140,7 @@ class EvidenceVault:
                 digest.update(raw)
                 prev = hashlib.sha256(prev.encode() + line).hexdigest()
             raise EvidenceError("EVIDENCE_UNSEALED")
-        except (ValueError, TypeError, KeyError, UnicodeError, json.JSONDecodeError) as exc:
+        except (InvalidTag, ValueError, TypeError, KeyError, UnicodeError, json.JSONDecodeError) as exc:
             raise EvidenceError("EVIDENCE_INTEGRITY_FAILURE") from exc
 
 
