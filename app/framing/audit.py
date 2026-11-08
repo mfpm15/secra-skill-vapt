@@ -12,7 +12,7 @@ import stat
 import uuid
 from pathlib import Path
 
-from app.masking import guard_mask
+from app.masking import guard_mask, EgressDeniedError
 from .template import unframe, FramingError
 
 
@@ -38,7 +38,7 @@ def record_framing(root: str | Path, *, task_id: str, provider: str, level: int,
         checked, _ = guard_mask(masked_brief, for_llm=True)
         if checked != masked_brief or unframe(framed_prompt, level, provider) != masked_brief:
             raise FramingAuditError("AUDIT_UNSAFE_PROMPT")
-    except (ValueError, TypeError, FramingError) as exc:
+    except (ValueError, TypeError, FramingError, EgressDeniedError) as exc:
         raise FramingAuditError("AUDIT_UNSAFE_PROMPT") from exc
     root = Path(root)
     if root.is_symlink():
