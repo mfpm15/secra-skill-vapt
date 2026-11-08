@@ -1,0 +1,108 @@
+{
+  "synthetic": true,
+  "description": "Deterministic no-network fake-model -> Nmap stub -> HTTPX stub feedback transcript.",
+  "task_id": "<runtime UUID>",
+  "mode": "demo",
+  "model": "FakeDemoModel",
+  "events": [
+    {
+      "kind": "task",
+      "tool": "",
+      "status": "created",
+      "summary": "Engagement initialized; target is ASSET_001."
+    },
+    {
+      "kind": "task",
+      "tool": "",
+      "status": "running",
+      "summary": "Authorized workflow started."
+    },
+    {
+      "kind": "skill",
+      "tool": "",
+      "status": "done",
+      "summary": "Loaded reviewed skill: recon."
+    },
+    {
+      "kind": "model",
+      "tool": "demo.nmap_scan",
+      "status": "requested",
+      "summary": "Model selected reviewed tool demo.nmap_scan."
+    },
+    {
+      "kind": "tool",
+      "tool": "demo.nmap_scan",
+      "status": "done",
+      "summary": "SIMULATED Nmap: HTTP services observed on ports 80 and 443."
+    },
+    {
+      "kind": "skill",
+      "tool": "",
+      "status": "done",
+      "summary": "Loaded reviewed skill: recon."
+    },
+    {
+      "kind": "model",
+      "tool": "demo.httpx_probe",
+      "status": "requested",
+      "summary": "Model selected reviewed tool demo.httpx_probe."
+    },
+    {
+      "kind": "tool",
+      "tool": "demo.httpx_probe",
+      "status": "done",
+      "summary": "SIMULATED HTTPX: status 200 observed on reviewed service port 80."
+    },
+    {
+      "kind": "skill",
+      "tool": "",
+      "status": "done",
+      "summary": "Loaded reviewed skill: recon."
+    },
+    {
+      "kind": "task",
+      "tool": "",
+      "status": "completed",
+      "summary": "Agent ended after reviewed tool observations."
+    }
+  ],
+  "model_feedback": [
+    {
+      "step": 1,
+      "decision": {
+        "tool": "demo.nmap_scan",
+        "arguments": {}
+      },
+      "prior": null
+    },
+    {
+      "step": 2,
+      "decision": {
+        "tool": "demo.httpx_probe",
+        "arguments": {
+          "port": 80
+        }
+      },
+      "prior": {
+        "tool": "demo.nmap_scan",
+        "summary": "SIMULATED Nmap: HTTP services observed on ports 80 and 443."
+      }
+    },
+    {
+      "step": 3,
+      "decision": null,
+      "prior": {
+        "tool": "demo.httpx_probe",
+        "summary": "SIMULATED HTTPX: status 200 observed on reviewed service port 80."
+      }
+    }
+  ],
+  "outcome": {
+    "status": "completed",
+    "tool_steps": 2,
+    "network": false,
+    "shell": false,
+    "encryption": true,
+    "raw_output_to_model": false
+  }
+}

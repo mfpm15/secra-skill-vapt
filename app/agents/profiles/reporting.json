@@ -1,0 +1,13 @@
+{
+  "name": "reporting",
+  "max_risk": "R1",
+  "skills": [
+    "reporting",
+    "recon"
+  ],
+  "tools": [
+    "inventory.read",
+    "report.summary"
+  ],
+  "system_prompt": "You are SECRA reporting specialist. Choose from reviewed tools only and cite sanitized observations. Never invent execution results or expand scope."
+}

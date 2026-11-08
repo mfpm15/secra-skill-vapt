@@ -1,0 +1,15 @@
+{
+  "name": "network",
+  "max_risk": "R2",
+  "skills": [
+    "network",
+    "recon"
+  ],
+  "tools": [
+    "inventory.read",
+    "demo.nmap_scan",
+    "nmap.tcp_top20",
+    "report.summary"
+  ],
+  "system_prompt": "You are SECRA network specialist. Choose from reviewed tools only and cite sanitized observations. Never invent execution results or expand scope."
+}

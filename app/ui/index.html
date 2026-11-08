@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SECRA · Agent Console</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;color-scheme:dark;background:#0b1020;color:#e8ecf5}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 85% 0%,#1d3750 0%,transparent 36%),#0b1020}
+header{padding:24px clamp(18px,4vw,62px);border-bottom:1px solid #29354c;display:flex;justify-content:space-between;align-items:center}
+header .brand{font-weight:850;letter-spacing:.12em;font-size:20px}header .brand b{color:#67d9b9}
+main{max-width:1320px;margin:0 auto;padding:32px 24px}
+h1{font-size:clamp(28px,4vw,44px);margin:0 0 8px;letter-spacing:-.045em}
+.sub{color:#97adc1;line-height:1.6;max-width:710px;margin:0 0 28px}
+.cols{display:grid;grid-template-columns:minmax(290px,390px) minmax(380px,1fr);gap:22px}
+.panel{background:#111a2b;border:1px solid #2b3953;border-radius:18px;padding:24px;box-shadow:0 12px 40px #0003}
+h2{margin:0 0 20px;font-size:17px}label{display:block;color:#b8c7d9;font-size:12px;margin:18px 0 7px;font-weight:650;letter-spacing:.04em}
+input,select{width:100%;padding:12px 13px;color:#f6f8ff;background:#101a2a;border:1px solid #40516e;border-radius:9px;outline-offset:3px;font-size:14px}
+input:focus,select:focus{border-color:#63d7b8;outline:none}
+.checkline{display:flex;gap:11px;align-items:center;margin-top:16px;color:#c0cedd;font-size:13px}
+.checkline input{width:18px;height:18px;flex:none;accent-color:#67d9b9}
+.actions{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
+button{border-radius:10px;border:1px solid #3d516e;background:#20324d;color:#e9f1fd;padding:11px 16px;cursor:pointer;font-weight:680}
+button.primary{background:#67d9b9;border-color:#67d9b9;color:#10252b;flex:1}button.danger{border-color:#aa5667;color:#ffa1b3;background:#39202a}
+button:disabled{opacity:.45;cursor:not-allowed}
+.legend{display:flex;gap:12px;align-items:center;font-size:12px;color:#91a7be;flex-wrap:wrap;margin:0 0 16px}
+.dot{display:inline-block;height:7px;width:7px;background:#62d7b7;border-radius:50%;margin-right:6px}
+#status{font-size:12px;color:#8ce6c5;border:1px solid #2c665f;border-radius:100px;padding:6px 12px}
+.muted{color:#93a9c2}#timeline{max-height:555px;overflow:auto;display:flex;flex-direction:column;gap:10px;min-height:250px}
+.entry{border:1px solid #283750;background:#0d1828;border-radius:12px;padding:13px 15px;overflow-wrap:anywhere}
+.entry .row{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.entry .label{font-weight:750;color:#d9eaff;font-size:13px}
+.entry .meta{font-size:11px;color:#87a4bd;white-space:nowrap}
+.entry .desc{color:#c8d5e6;margin:8px 0 0;font-size:13px;line-height:1.55}
+.entry .ref{font-family:ui-monospace,monospace;color:#6acfae;font-size:11px;margin-top:7px;display:block}
+#approvals{margin-top:17px}#approvals .approval{padding:14px;border:1px solid #856235;border-radius:10px;background:#292319;margin:9px 0}
+.approval button{margin:10px 8px 0 0;padding:8px 12px}
+#notice{color:#ffd7a0;font-size:12px;line-height:1.55;margin-top:20px}
+.badge{padding:5px 9px;border-radius:100px;background:#223246;color:#aee7d9;font-size:11px}
+@media(max-width:870px){.cols{grid-template-columns:1fr}main{padding:24px 15px}header{padding:20px}}
+</style></head>
+<body><header><div class="brand"><b>◆</b> SECRA <span class="muted">/ AGENT CONSOLE</span></div><span class="badge">LOCALHOST · MASKED OUTPUT</span></header>
+<main><h1>Assessment control center</h1><p class="sub">Operator-controlled tool selection, durable timeline, encrypted raw evidence, and real-time masked receipts. Demo uses offline fixtures; live network tools remain blocked until the kernel fence is attested.</p>
+<section class="cols"><div class="panel">
+<h2>New engagement</h2>
+<label for="token">Operator token</label><input id="token" type="password" placeholder="Token displayed in local terminal" autocomplete="off">
+<label for="target">Authorized target</label><input id="target" value="127.0.0.1" spellcheck="false">
+<label for="scope">Explicit scope / CIDR</label><input id="scope" value="127.0.0.1/32" spellcheck="false">
+<label for="mode">Mode</label><select id="mode"><option value="demo">Offline demo · zero network</option><option value="live">Live · fenced gateway only</option><option value="local">Real local HTTP HEAD · 127.0.0.1 only</option></select>
+<label for="model">9Router model ID (blank = fake model in demo)</label><input id="model" placeholder="e.g. glm/model" autocomplete="off" spellcheck="false">
+<div class="checkline"><input id="authorized" type="checkbox"><span>I confirm explicit written authorization for the supplied scope.</span></div>
+<div class="actions"><button id="start" class="primary">Start task</button><button id="stop" class="danger" disabled>Stop</button></div>
+<div id="notice">R3 needs operator review. R4 is never executable. Neither approval nor the AI overrides the gateway scope/fence.</div></div>
+<div class="panel"><div class="row" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:18px"><h2 style="margin:0">Execution timeline</h2><span id="status">Idle</span></div>
+<div class="legend"><span><i class="dot"></i> Event stream (SSE)</span><span>Asset: ASSET_001</span><span id="task-id"></span></div>
+<div id="timeline" aria-live="polite"><div class="entry muted">No task started. A completed demo records real tool-dispatch events with simulated observations only.</div></div>
+<div id="approvals"><h2 style="margin-top:24px">Approval queue</h2><div class="muted" id="approval-list">No pending approvals.</div></div>
+</div></section></main>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+let task=null,lastSeq=0,runSerial=0;
+const ctl=(id)=>$(id).value.trim();
+function badge(text){$("status").textContent=text;}
+function eventCard(ev){
+ const card=document.createElement("div");card.className="entry";
+ const top=document.createElement("div");top.className="row";
+ const name=document.createElement("span");name.className="label";name.textContent=(ev.tool||ev.kind)+" · "+ev.status;
+ const meta=document.createElement("span");meta.className="meta";meta.textContent="#"+ev.seq+" / "+ev.stamp;
+ top.append(name,meta);card.append(top);
+ const desc=document.createElement("div");desc.className="desc";desc.textContent=ev.summary;card.append(desc);
+ if(ev.output_ref){const ref=document.createElement("span");ref.className="ref";ref.textContent=ev.output_ref;card.append(ref);}
+ $("timeline").prepend(card);
+}
+async function api(path, method="GET", body){
+ const token=ctl("token");if(!token)throw Error("Enter the operator token.");
+ const resp=await fetch(path,{method,headers:{"X-Secra-Token":token,...(body?{"Content-Type":"application/json"}:{})},body:body?JSON.stringify(body):undefined,cache:"no-store"});
+ if(!resp.ok)throw Error("API "+resp.status+": "+(await resp.text()).slice(0,200));
+ return resp.headers.get("content-type")?.includes("application/json")?await resp.json():resp;
+}
+async function approvals(){
+ if(!task)return;
+ const rows=await api("/api/tasks/"+encodeURIComponent(task)+"/approvals");
+ const pane=$("approval-list");pane.replaceChildren();
+ if(!rows.length){pane.textContent="No pending approvals.";return;}
+ for(const row of rows){
+  const block=document.createElement("div");block.className="approval";
+  const text=document.createElement("div");text.textContent=row.tool+" · "+row.risk+" · "+row.state;block.append(text);
+  if(row.state==="pending"){for(const decision of ["approved","rejected"]){
+   const b=document.createElement("button");b.textContent=decision==="approved"?"Approve (review only)":"Reject";
+   b.onclick=async()=>{try{await api("/api/tasks/"+encodeURIComponent(task)+"/approvals/"+encodeURIComponent(row.id),"POST",{decision});await approvals();}catch(e){badge(String(e.message));}};
+   block.append(b);
+  }}pane.append(block);
+ }
+}
+async function stream(tid,serial){
+ const res=await api("/api/tasks/"+encodeURIComponent(tid)+"/events?after="+lastSeq);
+ const reader=res.body.getReader();const decoder=new TextDecoder();let buffer="";
+ while(serial===runSerial){
+  const {value,done}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});
+  const chunks=buffer.split("\n\n");buffer=chunks.pop();
+  for(const packet of chunks){
+   const entry=packet.split("\n").find(x=>x.startsWith("data: "));
+   if(!entry)continue;
+   const event=JSON.parse(entry.slice(6));if(event.seq<=lastSeq)continue;
+   lastSeq=event.seq;eventCard(event);
+   if(event.kind==="task")badge(event.status);
+  }
+ }
+ await approvals();
+ const info=await api("/api/tasks/"+encodeURIComponent(tid));
+ badge(info.status);
+ if(["completed","stopped","failed","exhausted","refused","awaiting_approval"].includes(info.status))$("stop").disabled=true;
+}
+$("start").onclick=async()=>{
+ try{
+  $("start").disabled=true;runSerial++;lastSeq=0;$("timeline").replaceChildren();
+  const form={target:ctl("target"),scope:ctl("scope"),mode:ctl("mode"),model:ctl("model"),authorized:$("authorized").checked};
+  const created=await api("/api/tasks","POST",form);
+  task=created.id;$("task-id").textContent=task.slice(0,8);$("stop").disabled=false;
+  await api("/api/tasks/"+encodeURIComponent(task)+"/start","POST",{});
+  badge("running");await stream(task,runSerial);
+ }catch(e){badge("Error");$("notice").textContent=e.message;}finally{$("start").disabled=false;}
+};
+$("stop").onclick=async()=>{if(!task)return;try{await api("/api/tasks/"+encodeURIComponent(task)+"/stop","POST",{});badge("stopped");$("stop").disabled=true;runSerial++;await approvals();}catch(e){badge(e.message);}};
+$("mode").onchange=()=>{if(["demo","local"].includes(ctl("mode"))){$("target").value="127.0.0.1";$("scope").value="127.0.0.1/32";}};
+</script></body></html>
