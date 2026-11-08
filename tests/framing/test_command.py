@@ -167,3 +167,15 @@ def test_unresolved_placeholder_no_fallback(tmp_path):
                           lambda _: "UNRESOLVED_PLACEHOLDER", tmp_path)
     assert out.status == "blocked" and out.argv is None
     assert out.reason == "UNRESOLVED_PLACEHOLDER"
+
+
+def test_committed_command_trace_is_exact_and_synthetic():
+    trace = json.loads((Path(__file__).parent / "fixtures/example_command_trace.json").read_text())
+    assert trace["synthetic"] is True
+    assert trace["argv_before"] == list(ARGV)
+    assert trace["frame_command_level2"] == frame_command(
+        trace["tool"], trace["argv_before"], trace["level"], trace["provider"],
+        purpose=trace["purpose"], risk_class=trace["risk_class"])
+    assert strip_command(trace["model_response_with_prose"], spec()) == trace["stripper_result_argv"]
+    assert trace["outcome"]["status"] == "prepared"
+    assert trace["outcome"]["executed_on_host"] is False
