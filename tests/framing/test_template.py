@@ -51,3 +51,12 @@ def test_level_3_minimal():
     out = frame(brief, 3, "glm/mock")
     assert out.startswith(START)
     assert unframe(out, 3, "glm/mock") == brief
+
+
+def test_committed_synthetic_trace_matches_current_frame():
+    record = json.loads((Path(__file__).parent / "fixtures/example_trace.json").read_text())
+    assert record["synthetic"] is True
+    assert frame(record["pre_frame_masked"], record["level"], record["provider"]) == record["framed_prompt"]
+    assert unframe(record["framed_prompt"], record["level"], record["provider"]) == record["pre_frame_masked"]
+    assert record["detected"]["reason"] == "ARTIFACT_PRESENT"
+    assert record["execution"]["real_scan_performed"] is False
