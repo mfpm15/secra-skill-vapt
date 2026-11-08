@@ -53,11 +53,12 @@ def test_wire_bytes_and_audit_example(monkeypatch, tmp_path):
         return Response()
 
     monkeypatch.setattr(main.urllib.request, "urlopen", capture)
+    engagement_id = str(uuid4())
     result = main.llm_assessment("glm/mock", [
         {"port": 443, "service": "https", "ip": "10.20.30.40",
          "hostname": "private.customer.internal",
          "Authorization": "Bearer supersecret", "customer": "SYNTHETIC ACME CLIENT"}
-    ], str(uuid4()))
+    ], engagement_id)
     assert "Review HTTP" in result
     assert len(requests) == 1
     wire = requests[0].data.decode()
@@ -71,6 +72,8 @@ def test_wire_bytes_and_audit_example(monkeypatch, tmp_path):
     records = [json.loads(line) for line in logs[0].read_text().splitlines()]
     assert [x["outcome"] for x in records] == ["prepared", "completed"]
     assert records[1]["result_reason"] == "ARTIFACT_PRESENT"
+    assert records[0]["engagement_id"] == engagement_id
+    assert records[1]["engagement_id"] == engagement_id
     assert records[1]["pre_frame_masked"] == safe()
     assert records[1]["framed_prompt"] == obj["messages"][1]["content"]
     assert stat.S_IMODE(logs[0].stat().st_mode) == 0o600
