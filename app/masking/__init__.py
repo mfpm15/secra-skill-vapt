@@ -33,6 +33,10 @@ def guard_mask(
             from app.security import assert_no_sensitive_payload
             obj = json.loads(text)
             assert_no_sensitive_payload(obj)
+            if obj.get("notice") != "Do not infer a vulnerability from an open port.":
+                raise EgressDeniedError("Unapproved free-text model field")
+            if json.dumps(obj, separators=(",", ":"), ensure_ascii=True) != text:
+                raise EgressDeniedError("Noncanonical or duplicate-key JSON denied")
         except (ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
             raise EgressDeniedError("Unstructured or unsafe model egress blocked") from exc
     masked, delta = redact(text, vault=vault, tier=tier, customer_names=customer_names)
