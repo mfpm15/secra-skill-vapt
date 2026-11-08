@@ -52,7 +52,15 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <div class="legend"><span><i class="dot"></i> Event stream (SSE)</span><span>Asset: ASSET_001</span><span id="task-id"></span></div>
 <div id="timeline" aria-live="polite"><div class="entry muted">No task started. A completed demo records real tool-dispatch events with simulated observations only.</div></div>
 <div id="approvals"><h2 style="margin-top:24px">Approval queue</h2><div class="muted" id="approval-list">No pending approvals.</div></div>
-</div></section></main>
+</div></section>
+<section class="panel" style="margin-top:22px">
+ <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+  <div><h2 style="margin-bottom:4px">Reviewed tool catalog</h2>
+   <span class="muted" style="font-size:12px">Availability is checked locally; listing a binary never grants execution.</span></div>
+  <button id="catalog-refresh" type="button">View tools</button>
+ </div>
+ <div id="tool-list" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:9px;margin-top:18px"></div>
+</section></main>
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
@@ -121,4 +129,20 @@ $("start").onclick=async()=>{
 };
 $("stop").onclick=async()=>{if(!task)return;try{await api("/api/tasks/"+encodeURIComponent(task)+"/stop","POST",{});badge("stopped");$("stop").disabled=true;runSerial++;await approvals();}catch(e){badge(e.message);}};
 $("mode").onchange=()=>{if(["demo","local"].includes(ctl("mode"))){$("target").value="127.0.0.1";$("scope").value="127.0.0.1/32";}};
+async function loadCatalog(){
+ const panel=$("tool-list");panel.replaceChildren();
+ try{
+  const items=await api("/api/tools");
+  for(const item of items){
+   const card=document.createElement("div");card.className="entry";
+   const title=document.createElement("div");title.className="label";title.textContent=item.name+" · "+item.risk;
+   const state=document.createElement("div");state.className="meta";
+   state.style.marginTop="7px";
+   state.textContent=item.availability+" · "+item.category+" · "+item.kali_package;
+   if(item.availability.startsWith("BLOCKED"))state.style.color="#ffb6aa";
+   card.append(title,state);panel.append(card);
+  }
+ }catch(e){panel.textContent="Catalog unavailable: "+e.message;}
+}
+$("catalog-refresh").onclick=loadCatalog;
 </script></body></html>
