@@ -159,3 +159,17 @@ def test_kali_lab_script_is_syntax_valid_and_requires_real_kali(tmp_path):
     assert "require-strict refuses" in run.stderr
     assert "--junitxml=" in script.read_text()
     assert "tests.fence.verify_lab" in script.read_text()
+
+
+def test_three_tool_parser_transcript_matches_fixture_without_network():
+    trace=json.loads((HERE/"triage_transcript.json").read_text())
+    assert trace["synthetic"] is True
+    assert trace["outcome"]["real_network_requests"] == 0
+    assert trace["outcome"]["provider_calls"] == 0
+    assert trace["kernel_fence_attested"] is False
+    for entry in trace["tools"]:
+        parsed=parse_tool_output(entry["tool"], (HERE/entry["source"]).read_bytes())
+        assert parsed["format"] == entry["format"]
+        assert parsed["entries"] == entry["observations"]
+        assert parsed["masked"] is True
+        assert parsed["parse_status"] == "parsed"
