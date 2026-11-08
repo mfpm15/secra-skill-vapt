@@ -1,6 +1,42 @@
-# masking.md — deterministic, reversible privacy gateway contract (NOT YET IMPLEMENTED)
+# masking.md — deterministic privacy gateway, Phase 1 implementation and remaining hardening
 
 This is the first mandatory enforcement layer before any model request. It runs locally, outside prompts, is not delegated to an LLM, and treats every upstream provider as untrusted. Do not activate raw-log-to-LLM processing before the acceptance tests below pass.
+
+## Phase 1 source-of-truth status (implementation at current feature branch)
+
+This document covers the long-term threat model. The Phase-1 subset below has ACTUAL Python code and CI tests; later-stage contracts below are DESIGN ONLY, not implied by this status.
+
+| Requirement | Code | Verified by |
+|---|---|---|
+| Entity detection: FQDN/private+public IPv4/IPv6/email/JWT/Bearer/Basic/cookie/hash/home path/customer dictionary | app/masking/redact.py | tests/masking/test_corpus.py, test_entities.py, test_additional_cases.py |
+| Stable typed placeholders and in-memory preview | app/masking/vault.py:MemoryVault | tests/masking/test_entities.py |
+| Encrypted per-engagement local reversible map, outside project | app/masking/vault.py:Vault | tests/masking/test_vault.py |
+| Unknown placeholder and free-form command denied | app/masking/rehydrate.py, app/masking/__init__.py:guard_unmask | tests/masking/test_entities.py |
+| Public vs private IP policy (foreign/trusted/local) | app/masking/policy.py | tests/masking/test_entities.py, test_additional_cases.py |
+| Split JWT across streaming chunks (no partial plaintext emission) | app/masking/redact.py:StreamingRedactor | tests/masking/test_streaming.py |
+| Existing model user-message wire boundary (only canonical allowlisted JSON; immutable public system content) | app/main.py:gateway_request, app/masking/__init__.py:guard_mask | tests/masking/test_llm_transport.py |
+| Command-line inspector | app/masking/__main__.py | tests/masking/test_cli.py |
+| Hand-written golden corpus (9 samples, all labeled [SINTETIS]) | tests/corpus/raw/, tests/corpus/expected/ | tests/masking/test_corpus.py |
+
+**Additional dependency:** cryptography==50.0.2, pinned in requirements.txt. Reason: AES-256-GCM authenticated encryption for vault mapping data; Python standard library does not provide a maintained AEAD implementation. For correct usage see https://cryptography.io/en/latest/hazmat/primitives/aead/.
+
+**Data keys:** one 256-bit randomly generated file key per UUID engagement; stored mode 0600 under ~/.local/state/secra/masking/keys (or explicitly supplied external root). AES-GCM nonce 12 random bytes per write, authenticated engagement AAD; encrypted mapping under encrypted_maps. Mapping plaintext is never written to repository files. This version relies on Unix filesystem permissions and optional host disk encryption; there is no OS KMS/HSM or key escrow integration yet.
+
+**Important scope limitation:** the redaction function is a deterministic best-effort detector for enumerated entity types, NOT a mathematically complete PII recognizer. All foreign model egress is therefore restricted to the existing fixed typed service schema; raw tool stdout, arbitrary HTML, customer reports or other free text are NOT accepted by guard_mask(for_llm=True), even if their regex redaction appears complete. All tiers retain secret redaction; the trusted/local tier permits public IPs, as explicitly required.
+
+**Streaming contract:** StreamingRedactor buffers the entire message (maximum 2 MB) and emits nothing until finish(); it handles arbitrary chunk boundaries without leaking a partial JWT. It does NOT implement low-latency streaming redaction; truncation/overflow fails closed.
+
+**Remaining enhancements from the broader threat model, not claimed implemented in Phase 1:** arbitrary nested URL/JSON/Unicode decoding, ambiguous high-entropy secrets, encrypted vault keys under KMS, map TTL/revocation/rotation, transparent per-engagement map lifecycle through a Kali tool gateway, provider fallback attestations, OS egress restrictions, approval/shell execution integration. Those belong to further privacy hardening and Phases 2–8. Do not treat passing the bounded corpus as a proof against previously unseen sensitive formats.
+
+**CLI inspection:**
+
+    python -m app.masking check tests/corpus/raw/httpx.jsonl
+    python -m app.masking check tests/corpus/raw/client-record.txt --customer "Helios Analytics"
+    python -m pytest tests/masking -q
+
+The CLI uses a non-persistent MemoryVault and prints the redacted text, number of placeholders and unresolved list only. It never outputs the original lookup map.
+
+---
 
 ## 1. Trust boundary and data order
 
