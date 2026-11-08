@@ -41,7 +41,7 @@ def test_unapproved_scope_and_r3_fail_before_any_network(tmp_path):
     r3 = make_intent("http.authenticated_test")
     with pytest.raises(ToolDenied):
         gateway.execute(r3, "192.0.2.10", "192.0.2.0/24", threading.Event())
-    assert gateway.audit.events(r3.engagement_id)[-1]["outcome"] == "POLICY_BLOCKED"
+    assert gateway.audit.events(r3.engagement_id)[-1]["outcome"] == "APPROVAL_BLOCKED"
 
 
 def test_reviewed_argv_has_no_proxy_shell_redirect_or_dynamic_flags(monkeypatch):
