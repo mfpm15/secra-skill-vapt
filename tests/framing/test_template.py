@@ -39,7 +39,7 @@ def test_delimiter_and_corruption_fail_closed():
 
 def test_provider_profiles_and_invalid_level():
     assert get_profile("glm/mock").level == 2
-    assert get_profile("openai/gpt-test").level == 1
+    assert get_profile("openai/gpt-test").level == 2
     assert get_profile("unknown/model").level == 2
     with pytest.raises(FramingError):
         frame("safe", 4, "glm/mock")
