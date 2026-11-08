@@ -1,6 +1,7 @@
 """Bounded *format repair* only. Safety refusals never trigger retries.
 
-A task has at most two actual model calls, no repeated levels, no policy bypass.
+A task has at most two *format retries* (three calls total) and no repeated levels.
+A level-2 start necessarily has only one further level (level 3).
 """
 from __future__ import annotations
 
@@ -12,14 +13,14 @@ from .detect import Detection
 @dataclass
 class FormatLadder:
     initial_level: int
-    max_attempts: int = 2
+    max_attempts: int = 3
     tried: list[int] = field(default_factory=list)
     status: str = "created"
 
     def __post_init__(self):
         if type(self.initial_level) is not int or not 0 <= self.initial_level <= 3:
             raise ValueError("LADDER_LEVEL_INVALID")
-        if type(self.max_attempts) is not int or not 1 <= self.max_attempts <= 2:
+        if type(self.max_attempts) is not int or not 1 <= self.max_attempts <= 3:
             raise ValueError("LADDER_ATTEMPTS_INVALID")
 
     def next_level(self, previous: Detection | None = None) -> int | None:
