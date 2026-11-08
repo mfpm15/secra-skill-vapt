@@ -135,3 +135,39 @@ def test_9router_compatible_tool_selection_performs_real_local_head(tmp_path, mo
     assert observed[1]["messages"][-1]["content"].startswith("Previous reviewed tool: local.http_head.")
     assert all("127.0.0.1" not in json.dumps(body) for body in observed)
     assert store.require(tid)["status"] == "completed"
+
+
+def test_real_local_head_invoked_through_authenticated_ui(tmp_path, monkeypatch, local_http):
+    import importlib
+    import time
+    from fastapi.testclient import TestClient
+    ui = importlib.import_module("app.ui.server")
+    store = TaskStore(tmp_path)
+    dispatcher = ToolDispatcher(tmp_path, store=store)
+    monkeypatch.setattr(ui, "STORE", store)
+    monkeypatch.setattr(ui, "DISPATCHER", dispatcher)
+    monkeypatch.setattr(ui, "TOKEN", "ci-local-control-token-123456")
+    engine = AgentLoop(store, dispatcher)
+    class ConfiguredOfflineModelLoop:
+        def run(self, tid, stop):
+            return engine.run(tid, model=OneLocalTool(local_http), stop=stop)
+    monkeypatch.setattr(ui, "LOOP", ConfiguredOfflineModelLoop())
+    client = TestClient(ui.app)
+    h = {"X-Secra-Token": "ci-local-control-token-123456"}
+    result = client.post("/api/tasks", headers=h, json={
+        "target": "127.0.0.1", "scope": "127.0.0.1/32",
+        "mode": "local", "model": "glm/mock", "authorized": True})
+    assert result.status_code == 200
+    tid = result.json()["id"]
+    assert client.post("/api/tasks/" + tid + "/start", headers=h).status_code == 200
+    for _ in range(100):
+        if store.require(tid)["status"] in {"completed", "failed"}:
+            break
+        time.sleep(0.02)
+    assert store.require(tid)["status"] == "completed"
+    assert OnlyHead.request_count == 1
+    streamed = client.get("/api/tasks/" + tid + "/events", headers=h)
+    assert streamed.status_code == 200
+    assert "local.http_head" in streamed.text
+    assert "LOCAL HEAD: status 204" in streamed.text
+    assert "127.0.0.1" not in streamed.text
