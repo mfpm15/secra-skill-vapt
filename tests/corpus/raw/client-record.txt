@@ -1,0 +1,3 @@
+Customer: Helios Analytics
+Path: /home/alice/private/helios.conf
+Connected to 8.8.8.8

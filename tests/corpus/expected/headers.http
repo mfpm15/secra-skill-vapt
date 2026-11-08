@@ -1,0 +1,6 @@
+HTTP/1.1 200 OK
+Server: nginx
+Set-Cookie: SID=<COOKIE_1>; Path=/; Secure; HttpOnly
+Set-Cookie: prefs=<COOKIE_2>; Path=/
+Location: https://<HOST_1>/?email=<EMAIL_1>
+Authorization: Basic <TOKEN_1>

@@ -1,0 +1,6 @@
+HTTP/1.1 200 OK
+Server: nginx
+Set-Cookie: SID=abc123XYZsecret; Path=/; Secure; HttpOnly
+Set-Cookie: prefs=day; Path=/
+Location: https://login.corp.internal/?email=security@example.com
+Authorization: Basic YWRtaW46cGFzczEyMw==

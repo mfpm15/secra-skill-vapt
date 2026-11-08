@@ -1,0 +1,3 @@
+Customer: <CUSTOMER_1>
+Path: <PATH_1>
+Connected to <IP_1>
