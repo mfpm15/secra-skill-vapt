@@ -179,3 +179,46 @@ def test_committed_command_trace_is_exact_and_synthetic():
     assert strip_command(trace["model_response_with_prose"], spec()) == trace["stripper_result_argv"]
     assert trace["outcome"]["status"] == "prepared"
     assert trace["outcome"]["executed_on_host"] is False
+
+
+def test_previous_run_summary_only_from_sanitized_counter():
+    frame_text = frame_command("nmap", ARGV, 2, "glm/mock",
+                               purpose=PURPOSE,
+                               previous_summary="Previous run observed 3 reviewed services.")
+    assert "PREVIOUS SANITIZED OBSERVATION: Previous run observed 3 reviewed services." in frame_text
+    with pytest.raises(FramingError, match="PREVIOUS_SUMMARY_UNSAFE"):
+        frame_command("nmap", ARGV, 2, "glm/mock", purpose=PURPOSE,
+                      previous_summary="root@client.internal token=secret")
+
+
+def test_non_reviewed_flags_denied_even_if_provided_as_initial_manifest():
+    with pytest.raises(FramingError, match="UNREVIEWED_FLAG"):
+        CommandSpec("nmap", ("nmap", "-sT", "-Pn", "-n",
+                             "--script", "vuln", "<HOST_1>"), PURPOSE, "R2")
+    with pytest.raises(FramingError, match="UNREVIEWED_FLAG"):
+        CommandSpec("curl", ("curl", "-I", "--data", "private",
+                             "http://<HOST_1>/"), "Review authorized HTTP response headers", "R2")
+
+
+def test_placeholder_must_be_registered_before_proposal():
+    with pytest.raises(FramingError, match="PLACEHOLDER_UNKNOWN"):
+        frame_command("nmap", (*ARGV[:-1], "<HOST_999>"), 2, "glm/mock", purpose=PURPOSE)
+    # Explicitly reviewed additional aliases remain unresolved in the frame.
+    known = frozenset({"<HOST_1>", "<HOST_2>"})
+    frame_text = frame_command("nmap", (*ARGV[:-1], "<HOST_2>"), 2, "glm/mock",
+                               purpose=PURPOSE, registered_placeholders=known)
+    assert "<HOST_2>" in frame_text
+
+
+def test_provider_failure_history_can_raise_foreign_start_level(monkeypatch):
+    import app.framing.template as template_module
+    original = template_module._load
+    def alternate(name):
+        source = original(name)
+        if name == "profiles.yaml":
+            source["providers"]["glm"]["format_failures"] = 4
+            source["providers"]["local"]["format_failures"] = 99
+        return source
+    monkeypatch.setattr(template_module, "_load", alternate)
+    assert get_profile("glm/mock").level == 3
+    assert get_profile("local/mock").level == 0
