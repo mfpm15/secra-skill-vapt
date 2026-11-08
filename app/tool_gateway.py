@@ -80,7 +80,7 @@ class AuditLedger:
                           "SCOPE_BLOCKED", "POLICY_BLOCKED", "FENCE_BLOCKED",
                           "EXECUTION_STARTED", "EXECUTION_FAILED", "SEALED",
                           "COMPLETED", "CANCELLED", "TIMEOUT", "OUTPUT_LIMIT",
-                          "EVIDENCE_FAILED"})
+                          "EVIDENCE_FAILED", "ASSET_BUSY"})
 
     def __init__(self, root: Path):
         _private_dir(root)
@@ -178,6 +178,7 @@ class ToolGateway:
         self.audit = AuditLedger(self.vault.root)
         self.fence = fence if fence is not None else DenyNetworkFence()
         self._active: dict[UUID, int] = {}
+        self._asset_locks: dict[str, threading.Lock] = {}
         self._lock = threading.RLock()
 
     def terminate_process_group(self, run_id: UUID, *, grace: float = 0.25) -> None:
@@ -308,7 +309,19 @@ class ToolGateway:
             self.audit.emit(intent.engagement_id, intent.request_id, run_id,
                             intent.action_id, "FENCE_BLOCKED", policy.version)
             raise
-        return self._run_fixed_process(argv, intent, spec, run_id, stop)
+        asset_key = str(intent.engagement_id) + ":" + resolved
+        with self._lock:
+            if len(self._asset_locks) >= 128 and asset_key not in self._asset_locks:
+                raise GatewayError("ASSET_LOCK_CAPACITY_EXCEEDED")
+            asset_lock = self._asset_locks.setdefault(asset_key, threading.Lock())
+        if not asset_lock.acquire(blocking=False):
+            self.audit.emit(intent.engagement_id, intent.request_id, run_id,
+                            spec.action_id, "ASSET_BUSY", policy.version)
+            raise GatewayError("ASSET_BUSY")
+        try:
+            return self._run_fixed_process(argv, intent, spec, run_id, stop)
+        finally:
+            asset_lock.release()
 
     def parse_nmap_receipt(self, receipt: ToolReceipt) -> list[dict]:
         if receipt.action_id != "nmap.tcp_top20" or receipt.exit_code != 0:
