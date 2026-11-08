@@ -39,6 +39,14 @@ COMMAND_WRAPPERS = {
     3: (),
 }
 KNOWN_TOOLS = frozenset({"nmap", "curl"})
+REVIEWED_PURPOSES = frozenset({
+    "Verify an authorized service endpoint",
+    "Verify authorized TCP service ports",
+    "Review authorized HTTP response headers",
+})
+SAFE_FLAGS = frozenset({"-sT", "-Pn", "-n", "-T2", "--open"})
+SAFE_CURL_FLAGS = frozenset({"-q", "-I", "--head", "--silent", "--show-error"})
+
 
 
 @dataclass(frozen=True)
@@ -58,8 +66,8 @@ class CommandSpec:
             raise FramingError("COMMAND_BINARY_MISMATCH")
         if not isinstance(self.purpose, str) or not 1 <= len(self.purpose) <= 160:
             raise FramingError("COMMAND_PURPOSE_INVALID")
-        if any(ch in self.purpose for ch in ("\n", "\r", "\x00", "<", ">")):
-            raise FramingError("COMMAND_PURPOSE_INVALID")
+        if self.purpose not in REVIEWED_PURPOSES:
+            raise FramingError("COMMAND_PURPOSE_NOT_REVIEWED")
         if self.risk_class not in {"R0", "R1", "R2", "R3", "R4"}:
             raise FramingError("COMMAND_RISK_INVALID")
         if len(self.variants) > 8:
@@ -86,6 +94,49 @@ class CommandSpec:
                 for placeholder in re.findall(r"<[^<>\s]{1,100}>", token):
                     if not re.fullmatch(r"<(?:HOST|IP)_[1-9][0-9]*>", placeholder):
                         raise FramingError("COMMAND_PLACEHOLDER_UNKNOWN")
+            self._review_argv(candidate)
+
+    def _review_argv(self, candidate: tuple[str, ...]) -> None:
+        """Only bounded, passive connection/HEAD argv shapes are representable."""
+        if self.tool == "nmap":
+            if not re.fullmatch(r"<HOST_[1-9][0-9]*>", candidate[-1]):
+                raise FramingError("COMMAND_TARGET_PLACEHOLDER_REQUIRED")
+            flags = candidate[1:-1]
+            if not {"-sT", "-Pn", "-n"}.issubset(set(flags)):
+                raise FramingError("COMMAND_NMAP_PROFILE_DENIED")
+            i = 0
+            while i < len(flags):
+                flag = flags[i]
+                if flag in SAFE_FLAGS:
+                    i += 1
+                    continue
+                if flag in {"-p", "-oX"} and i + 1 < len(flags):
+                    value = flags[i + 1]
+                    if flag == "-p":
+                        if not re.fullmatch(r"\d{1,5}(?:,\d{1,5}){0,19}", value):
+                            raise FramingError("COMMAND_PORTS_DENIED")
+                        if any(not 1 <= int(p) <= 65535 for p in value.split(",")):
+                            raise FramingError("COMMAND_PORTS_DENIED")
+                    elif not value.startswith(("/tmp/", "/var/lib/secra/work/")):
+                        raise FramingError("COMMAND_OUTPUT_PATH_DENIED")
+                    i += 2
+                    continue
+                raise FramingError("COMMAND_UNREVIEWED_FLAG")
+        else:
+            flags = candidate[1:-1]
+            if not flags or not {"-I", "--head"}.intersection(set(flags)):
+                raise FramingError("COMMAND_CURL_METHOD_DENIED")
+            i = 0
+            while i < len(flags):
+                flag = flags[i]
+                if flag in SAFE_CURL_FLAGS:
+                    i += 1
+                elif flag == "--noproxy" and i + 1 < len(flags) and flags[i + 1] == "*":
+                    i += 2
+                else:
+                    raise FramingError("COMMAND_UNREVIEWED_FLAG")
+            if not re.fullmatch(r"https?://<HOST_[1-9][0-9]*>(?::\d{2,5})?/", candidate[-1]):
+                raise FramingError("COMMAND_CURL_TARGET_DENIED")
 
     @property
     def approved(self) -> tuple[tuple[str, ...], ...]:
@@ -108,7 +159,8 @@ def _check_command_wrapper(level: int, dictionary: str) -> None:
 
 def frame_command(tool: str, argv: Sequence[str], level: int, provider: str,
                   *, purpose: str = "Verify an authorized service endpoint",
-                  risk_class: str = "R2") -> str:
+                  risk_class: str = "R2",
+                  previous_summary: str | None = None) -> str:
     """Preserve argv by JSON-encoding the original list; no paraphrases or shell."""
     spec = CommandSpec(tool, tuple(argv), purpose, risk_class)
     profile = get_profile(provider)
@@ -117,10 +169,15 @@ def frame_command(tool: str, argv: Sequence[str], level: int, provider: str,
     if len(data) > profile.max_length:
         raise FramingError("COMMAND_TOO_LARGE")
     prefix = "\n".join(COMMAND_WRAPPERS[level])
+    if previous_summary is not None and not re.fullmatch(
+            r"Previous run observed (?:0|[1-9][0-9]?) reviewed services\.", previous_summary):
+        raise FramingError("COMMAND_PREVIOUS_SUMMARY_UNSAFE")
+    summary = ("PREVIOUS SANITIZED OBSERVATION: " + previous_summary + "\n"
+               if previous_summary is not None else "")
     lines = ("TOOL: " + tool + "\n"
              + "PURPOSE: " + spec.purpose + "\n"
              + "RISK: " + spec.risk_class + "\n"
-             + COMMAND_START + "\n" + data + "\n" + COMMAND_END)
+             + summary + COMMAND_START + "\n" + data + "\n" + COMMAND_END)
     suffix = COMMAND_CONTRACT
     if risk_class in {"R3", "R4"}:
         suffix += "\nRISK_CLASS=" + risk_class + " (approval required before execution)"
