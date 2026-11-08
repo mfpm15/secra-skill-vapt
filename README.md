@@ -4,6 +4,38 @@ A functional, scoped VAPT dashboard MVP with near-real-time agent progress, genu
 
 **Current scope:** single IPv4 target per engagement, top-20 TCP ports via Nmap, optional curl HTTP header checks, and advisory-only LLM analysis. **No automatic exploitation or confirmed vulnerability claims.** Demo results are clearly labeled SIMULATED. Never expose this single-user MVP directly to the internet.
 
+## New agent console and MCP integration (developer preview)
+
+The new single-page console is a separate localhost app; it does **not** activate the unverified Phase-2 network fence. Demo is offline, with synthetic Nmap and HTTPX observations. Use Python 3.12+, then:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+export SECRA_DASHBOARD_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+export SECRA_DATA_DIR="$PWD/data"
+python -m app
+```
+
+Open `http://127.0.0.1:8765` and enter the operator token. For the built-in **offline** loop, set target `127.0.0.1`, scope `127.0.0.1/32`, mode **demo**, leave model empty, confirm authorization, and click **Start task**. This dispatches two local no-network stub adapters and streams masked receipt events via SSE. Each raw stub result is stored as authenticated encrypted local evidence. Click **Stop** to prevent more work.
+
+To use an actual configured model **only for selecting reviewed tools** (not unverified live network execution), set `SECRA_9ROUTER_BASE_URL` and `SECRA_9ROUTER_API_KEY` on the server, then enter its provider/model ID in the demo form. The request contains only canonical sanitized service metadata, public reviewed skill text and reduced tool schemas. The actual 9Router/provider integration has **not been independently tested with real credentials** in this repository's CI.
+
+The standalone MCP server reads `app/mcp/manifest.json`, and supports the official MCP protocol (tools/list and tools/call) through two transports:
+
+```bash
+python -m app.mcp.server --transport stdio
+python -m app.mcp.server --transport http --port 8766
+```
+
+For stdio, let a trusted MCP client spawn the process and speak protocol over stdin/stdout (do not type interactive shell commands into it). For Streamable HTTP, use `http://127.0.0.1:8766/mcp` with `Authorization: Bearer $SECRA_DASHBOARD_TOKEN`; remote exposure, DNS-rebinding origins, and missing tokens are blocked. MCP tool schemas are exact manifest JSON Schemas. Outputs are `{status, exit_code, summary, output_ref, masked}`. `output_ref` is an `evidence://<engagement UUID>/<run UUID>` local reference—not an outbound download URL.
+
+Reviewed tools currently advertised: `inventory.read` (R0); `demo.nmap_scan` (R0, offline); `demo.httpx_probe` (R0, offline); `report.summary` (R0, offline); `nmap.tcp_top20` (R2, live gateway); `curl.http_head` (R2, live gateway); `http.authenticated_test` (R3, approval queue only); `prohibited.r4` (R4, always blocked). Add a new tool through an independently reviewed manifest entry and adapter stub. Agents cannot directly run arbitrary argv, install templates, use shells, or bypass the existing typed gateway.
+
+The agent loop is bounded to **25 tool steps and 20 minutes**; a stopped, refused or exhausted task cannot silently restart. Every selected tool and masked result is written to a sequenced local event ledger. R3 approvals are review-only until a separate audited adapter is installed, and R4 stays forbidden. The existing gateway still denies live network operations **until a real Kali kernel egress attestation is present**. Therefore **a real command against 127.0.0.1 with a live LLM remains an unverified and unavailable acceptance criterion**; do not interpret the passing synthetic demo as completing it.
+
+For regression testing install `requirements-dev.txt` and run `python -m pytest tests/e2e -q -ra` and `python -m pytest -m "not lab" -q`. Privileged `tests/fence/ -m lab` requires an independently provisioned Kali VM; no lab proofs have been provided.
+
 ## Quick start on Kali Linux or Linux
 
 Requires Python 3.11+, Nmap, and curl. In the repository root:
