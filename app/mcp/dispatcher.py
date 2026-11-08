@@ -50,6 +50,12 @@ class ToolDispatcher:
         if tool.mode not in {"both", task["mode"]}:
             self.store.append(tid, "tool", tool.name, "denied", "Tool unavailable in this task mode.")
             return receipt("denied", None, "Tool unavailable in this task mode.")
+        if tool.adapter == "catalog_only":
+            probe = self.manifest.probe(tool.name)
+            reason = probe["status"]
+            self.store.append(tid, "tool", tool.name, "denied",
+                              "Catalog tool blocked: " + reason + ".")
+            return receipt("blocked", None, "Catalog tool blocked: " + reason + ".")
         if tool.risk in {"R3", "R4"}:
             aid = self.store.request_approval(tid, tool.name, tool.risk)
             if tool.risk == "R4":
