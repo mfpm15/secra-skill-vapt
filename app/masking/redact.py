@@ -38,6 +38,7 @@ HASH_HEX = re.compile(r"(?<![A-Za-z0-9])(?:[a-fA-F0-9]{128}|[a-fA-F0-9]{64}|[a-f
 HASH_BCRYPT = re.compile(r"\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}")
 HASH_ARGON2 = re.compile(r"\$argon2(?:id|i|d)\$[^\s<>\"']+")
 INTERNAL_SUFFIX = (".internal", ".local", ".lan", ".corp", ".intra")
+CUSTOMER_FIELD = re.compile(r"(?im)^(?:Customer|Client|Tenant|Organization|Company):[ \t]*([^\r\n<>]+?)[ \t]*$")
 
 
 class MaskingError(RuntimeError):
@@ -98,6 +99,7 @@ def detect_spans(text: str, policy: MaskPolicy, customer_names: Iterable[str] = 
     if policy.mask_home_path:
         spans += _spans(text, HOME_PATH, "PATH", 90)
     if policy.mask_customer:
+        spans += _spans(text, CUSTOMER_FIELD, "CUSTOMER", 89, group=1)
         for name in sorted(set(customer_names), key=lambda x: (-len(x), x.casefold())):
             if not isinstance(name, str) or not (2 <= len(name) <= 150):
                 raise UnsupportedInputError("Invalid customer registry entry")
