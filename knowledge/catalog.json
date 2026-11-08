@@ -1,0 +1,244 @@
+[
+  {
+    "id": "scope-and-engagement",
+    "title": "Engagement & Scope Guardian",
+    "category": "governance",
+    "tags": [
+      "common"
+    ],
+    "standards": [
+      "PTES",
+      "NIST SP 800-115"
+    ],
+    "summary": "Translate written Rules of Engagement into a reviewable, enforceable assessment boundary.",
+    "source": "SECRA original skill (research-derived)",
+    "references": [
+      "https://csrc.nist.gov/pubs/sp/800/115/final"
+    ],
+    "version": "1.0.0"
+  },
+  {
+    "id": "network-service-discovery",
+    "title": "Network Service Discovery",
+    "category": "network",
+    "tags": [
+      "ssh",
+      "ftp",
+      "smtp",
+      "domain",
+      "mysql",
+      "postgresql",
+      "microsoft-ds",
+      "ms-wbt-server",
+      "unknown"
+    ],
+    "standards": [
+      "NIST SP 800-115",
+      "CIS Controls"
+    ],
+    "summary": "Build a reproducible inventory of reachable TCP services without treating open ports as vulnerabilities.",
+    "source": "SECRA original skill (research-derived)",
+    "references": [
+      "https://nmap.org/book/man.html",
+      "https://csrc.nist.gov/pubs/sp/800/115/final"
+    ],
+    "version": "1.0.0"
+  },
+  {
+    "id": "http-security-configuration",
+    "title": "HTTP Security Configuration",
+    "category": "web",
+    "tags": [
+      "http",
+      "https"
+    ],
+    "standards": [
+      "OWASP WSTG v4.2",
+      "OWASP ASVS"
+    ],
+    "summary": "Assess observable HTTP security configuration and prepare evidence-backed follow-up checks.",
+    "source": "SECRA original skill (research-derived)",
+    "references": [
+      "https://owasp.org/www-project-web-security-testing-guide/",
+      "https://cheatsheetseries.owasp.org/"
+    ],
+    "version": "1.0.0"
+  },
+  {
+    "id": "tls-transport-review",
+    "title": "TLS Transport Review",
+    "category": "web",
+    "tags": [
+      "https"
+    ],
+    "standards": [
+      "OWASP WSTG v4.2",
+      "OWASP ASVS",
+      "RFC 8446"
+    ],
+    "summary": "Review TLS certificate validity and transport security without weakening local trust checks.",
+    "source": "SECRA original skill (research-derived)",
+    "references": [
+      "https://www.rfc-editor.org/rfc/rfc8446",
+      "https://owasp.org/www-project-web-security-testing-guide/"
+    ],
+    "version": "1.0.0"
+  },
+  {
+    "id": "authentication-session-review",
+    "title": "Authentication and Session Review",
+    "category": "web",
+    "tags": [
+      "http",
+      "https"
+    ],
+    "standards": [
+      "OWASP WSTG v4.2",
+      "OWASP ASVS"
+    ],
+    "summary": "Model authentication, session lifecycle, and account recovery controls for an authorized role-based review.",
+    "source": "SECRA original skill (research-derived)",
+    "references": [
+      "https://owasp.org/www-project-web-security-testing-guide/",
+      "https://cheatsheetseries.owasp.org/"
+    ],
+    "version": "1.0.0"
+  },
+  {
+    "id": "authorization-and-business-logic",
+    "title": "Authorization & Business Logic",
+    "category": "web",
+    "tags": [
+      "http",
+      "https"
+    ],
+    "standards": [
+      "OWASP WSTG v4.2",
+      "OWASP ASVS"
+    ],
+    "summary": "Build a threat model for application-specific workflows and tenant boundaries.",
+    "source": "SECRA original skill (research-derived)",
+    "references": [
+      "https://owasp.org/www-project-web-security-testing-guide/",
+      "https://owasp.org/www-project-application-security-verification-standard/"
+    ],
+    "version": "1.0.0"
+  },
+  {
+    "id": "api-contract-assessment",
+    "title": "API Contract & Inventory Review",
+    "category": "api",
+    "tags": [
+      "http",
+      "https"
+    ],
+    "standards": [
+      "OWASP API Security Top 10 2023",
+      "OWASP ASVS"
+    ],
+    "summary": "Identify exposed API functionality, trust boundaries and missing ownership verification.",
+    "source": "SECRA original skill (research-derived)",
+    "references": [
+      "https://owasp.org/API-Security/",
+      "https://owasp.org/www-project-application-security-verification-standard/"
+    ],
+    "version": "1.0.0"
+  },
+  {
+    "id": "mobile-security-review",
+    "title": "Mobile Application Security Review",
+    "category": "mobile",
+    "tags": [
+      "mobile"
+    ],
+    "standards": [
+      "OWASP MASVS",
+      "OWASP MASTG"
+    ],
+    "summary": "Plan mobile security assessment using MASVS controls and reproducible MASTG test cases.",
+    "source": "SECRA original skill (research-derived)",
+    "references": [
+      "https://mas.owasp.org/MASTG/",
+      "https://mas.owasp.org/MASVS/"
+    ],
+    "version": "1.0.0"
+  },
+  {
+    "id": "cloud-container-posture",
+    "title": "Cloud & Container Posture",
+    "category": "cloud",
+    "tags": [
+      "cloud"
+    ],
+    "standards": [
+      "CIS Benchmarks",
+      "NIST SP 800-190"
+    ],
+    "summary": "Evaluate configuration and supply-chain posture from explicitly authorized read-only inventories.",
+    "source": "SECRA original skill (research-derived)",
+    "references": [
+      "https://www.cisecurity.org/cis-benchmarks",
+      "https://csrc.nist.gov/pubs/sp/800/190/final"
+    ],
+    "version": "1.0.0"
+  },
+  {
+    "id": "code-security-audit",
+    "title": "Security-Focused Code Audit",
+    "category": "code",
+    "tags": [
+      "code"
+    ],
+    "standards": [
+      "CWE",
+      "OWASP ASVS"
+    ],
+    "summary": "Review application code paths and validate suspected defects with explicit data-flow reasoning.",
+    "source": "SECRA original skill (research-derived)",
+    "references": [
+      "https://cwe.mitre.org/",
+      "https://owasp.org/www-project-application-security-verification-standard/"
+    ],
+    "version": "1.0.0"
+  },
+  {
+    "id": "finding-verification",
+    "title": "False-Positive & Evidence Verification",
+    "category": "quality",
+    "tags": [
+      "common"
+    ],
+    "standards": [
+      "CVSS v4.0",
+      "CWE",
+      "OWASP WSTG"
+    ],
+    "summary": "Distinguish candidate issues, confirmed observations, true vulnerabilities and environmental uncertainty.",
+    "source": "SECRA original skill (research-derived)",
+    "references": [
+      "https://www.first.org/cvss/v4.0/specification-document",
+      "https://cwe.mitre.org/"
+    ],
+    "version": "1.0.0"
+  },
+  {
+    "id": "reporting-and-retest",
+    "title": "Professional VAPT Reporting & Retest",
+    "category": "report",
+    "tags": [
+      "common"
+    ],
+    "standards": [
+      "CVSS v4.0",
+      "CWE",
+      "OWASP WSTG v4.2"
+    ],
+    "summary": "Produce accurate, actionable security deliverables with clear separation between observation and risk.",
+    "source": "SECRA original skill (research-derived)",
+    "references": [
+      "https://owasp.org/www-project-web-security-testing-guide/",
+      "https://www.first.org/cvss/"
+    ],
+    "version": "1.0.0"
+  }
+]

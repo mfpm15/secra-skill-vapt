@@ -1,6 +1,6 @@
 # SECRA — Local-first Agentic VAPT Operations
 
-A functional, scoped VAPT dashboard MVP with near-real-time agent progress, local Kali tooling, structured service inventory, privacy-controlled optional LLM advice through 9Router, and a downloadable Markdown report.
+A functional, scoped VAPT dashboard MVP with near-real-time agent progress, genuine sapper-v2 graph memory, locally curated pentester knowledge, and local Kali tooling, structured service inventory, privacy-controlled optional LLM advice through 9Router, and a downloadable Markdown report.
 
 **Current scope:** single IPv4 target per engagement, top-20 TCP ports via Nmap, optional curl HTTP header checks, and advisory-only LLM analysis. **No automatic exploitation or confirmed vulnerability claims.** Demo results are clearly labeled SIMULATED. Never expose this single-user MVP directly to the internet.
 
@@ -21,10 +21,20 @@ Open http://127.0.0.1:8765 and enter the access token from the terminal. If you 
 1. Provide engagement name, target IPv4 address and authorized IP/CIDR scope which contains the target.
 2. Choose Demo for UI testing or Live to run locally installed Nmap and curl.
 3. Confirm written authorization and click Create & Launch Assessment.
-4. Monitor six agent stages, scrubbed logs and service observations.
+4. Monitor seven agent stages, scrubbed logs and service observations.
 5. Download the local Markdown report when finished.
 
 Only assess assets you own or have explicit written authorization to test.
+
+## Local pentester skills and genuine sapper-v2 memory
+
+- **12 original, curated SKILL.md files** in knowledge/skills/, with a searchable dashboard knowledge panel and versioned metadata in knowledge/catalog.json.
+- Deterministic service-based routing selects suitable specialist methodology (HTTP/TLS/API, network, scope governance, verification, reporting).
+- Knowledge selections are recorded in the operator log and report. Skill content is static/public and included as a bounded advisory system prompt; target outputs are never inserted as trusted instructions.
+- **Actual sapper-v2 graph CLI** is vendored under vendor/sapper_v2, pinned to commit 697b30f77ebedf5e551a0595b3e883f9c25f9e73 under MIT. Each engagement persists its own graph in data/sapper_graphs/<engagement UUID>/.sapper/.
+- Every approved workflow stage creates an intent and closes it with a locally verified status fact. View these edges in the dashboard or authenticated GET /api/engagements/{id}/graph.
+- Sapper **auto / dispatch / arena / CTF commander and watchdog are intentionally not enabled**: their autonomous shell and credential flows are unsuitable for customer environments without a separately audited sandbox and approval system.
+- No customer IP, hostname, credential or raw evidence is written into the Sapper graph or sent through its CLI by the SECRA integration.
 
 ## 9Router and model selection
 
@@ -67,7 +77,7 @@ pip install -r requirements-dev.txt
 python -m pytest -q
 ~~~
 
-Tests cover scope, masking, LLM payload schema, authentication, demo mode and report generation. CI runs on PRs.
+Tests cover scope, masking, LLM payload schema, authentication, knowledge selection, genuine sapper-v2 graph operations, demo mode and report generation. CI runs on PRs.
 
 ## Architecture and next steps
 

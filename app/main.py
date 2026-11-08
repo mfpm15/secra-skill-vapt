@@ -20,6 +20,9 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
+from .knowledge import catalog as knowledge_catalog, content as skill_content, find_skill, select_skills, safe_skill_context
+from .sapper_integration import GraphError, SCRIPT as SAPPER_SCRIPT, initialize_graph, stage_begin, stage_end, public_graph
+
 from .security import (
     assert_no_sensitive_payload, llm_safe_payload, redact, safe_gateway,
     safe_model, validate_scope,
@@ -196,9 +199,17 @@ def llm_assessment(model, services):
         return "LLM skipped: configure SECRA_9ROUTER_API_KEY locally."
     payload = llm_safe_payload(services)
     assert_no_sensitive_payload(payload)
+    selected_ids, vetted_methods = safe_skill_context(services)
     request = {"model": safe_model(model), "temperature": 0.1, "max_tokens": 320,
       "messages": [
-       {"role": "system", "content": "You are a defensive VAPT reviewer. You receive only sanitized port metadata. Suggest verification CHECKLIST items, not claims of actual vulnerabilities. Never issue tool commands. Never assume a finding is confirmed."},
+       {"role": "system", "content": (
+        "You are a defensive VAPT reviewer. You receive only sanitized port metadata. "
+        "Suggest verification CHECKLIST items, not actual vulnerability claims. "
+        "Never produce commands, target addresses, exploit payloads, or tool execution instructions. "
+        "You cannot independently validate security issues. "
+        "Below is curated, static, public SECRA methodology for professional judgment only; "
+        "it does not grant permission to access a target.\n\n"
+        + vetted_methods)},
        {"role": "user", "content": json.dumps(payload, separators=(",", ":"))}
       ]}
     try:
@@ -210,21 +221,50 @@ def llm_assessment(model, services):
     except (urllib.error.URLError, ValueError, KeyError, TimeoutError, OSError):
         return "LLM request failed; no prompt or raw tool output was logged."
 
-AGENTS = ["Scope Guardian", "Recon Agent", "HTTP Analyst", "LLM Advisor",
-          "Verification", "Report Builder"]
+AGENTS = ["Scope Guardian", "Recon Agent", "HTTP Analyst", "Knowledge Curator",
+          "LLM Advisor", "Verification", "Report Builder"]
 
 def pipeline(eid, stop):
     entry = fetch_engagement(eid)
     demo = entry["mode"] == "demo"
     services = []
     notes = []
+    skill_ids = []
+    parent_fact = None
+
+    def graph_open(title):
+        if parent_fact is None:
+            return None
+        try:
+            return stage_begin(eid, DATA, title, parent_fact)
+        except GraphError:
+            event(eid, "Sapper Memory", "warning", "Could not open a fact-graph intent.")
+            return None
+
+    def graph_close(title, intent_id, observation):
+        nonlocal parent_fact
+        if not intent_id:
+            return
+        try:
+            parent_fact = stage_end(eid, DATA, title, intent_id, observation)
+        except GraphError:
+            event(eid, "Sapper Memory", "warning", "Could not conclude a fact-graph intent.")
+
     try:
         set_status(eid, "running")
         event(eid, "Scope Guardian", "running", "Scope policy validation started.")
         validate_scope(entry["target"], entry["scope"])
+        try:
+            parent_fact = initialize_graph(eid, DATA)
+            gi = graph_open("Scope Guardian")
+            graph_close("Scope Guardian", gi, "Scope policy passed with operator authorization attested")
+            event(eid, "Sapper Memory", "completed", "Sapper-v2 fact-intent graph initialized for this engagement.")
+        except GraphError:
+            event(eid, "Sapper Memory", "warning", "Graph unavailable; bounded assessment remains operational.")
         event(eid, "Scope Guardian", "completed", "Target contained in approved scope. Mode: " + entry["mode"] + ".")
         if stop.is_set():
             raise InterruptedError()
+        recon_intent = graph_open("Recon Agent")
         event(eid, "Recon Agent", "running", "Starting " + ("SIMULATION" if demo else "bounded Nmap discovery") + ".")
         if demo:
             time.sleep(0.4)
@@ -240,8 +280,10 @@ def pipeline(eid, stop):
                 event(eid, "Recon Agent", "error", str(exc))
                 notes.append("Recon unavailable or incomplete.")
         save_services(eid, services, demo)
+        graph_close("Recon Agent", recon_intent, "Recon stage completed with " + str(len(services)) + " reported service ports")
         if stop.is_set():
             raise InterruptedError()
+        http_intent = graph_open("HTTP Analyst")
         event(eid, "HTTP Analyst", "running", "Reviewing discovered HTTP endpoints.")
         if demo:
             time.sleep(0.35)
@@ -251,14 +293,30 @@ def pipeline(eid, stop):
         for message in notes:
             event(eid, "HTTP Analyst", "note", message)
         event(eid, "HTTP Analyst", "completed", "HTTP stage finished.")
+        graph_close("HTTP Analyst", http_intent, "HTTP review finished with " + str(len(notes)) + " local observations")
         if stop.is_set():
             raise InterruptedError()
+        knowledge_intent = graph_open("Knowledge Curator")
+        event(eid, "Knowledge Curator", "running", "Selecting professional security skills by discovered service.")
+        skill_ids = [x["id"] for x in select_skills(services)]
+        event(eid, "Knowledge Curator", "completed",
+              "Loaded " + str(len(skill_ids)) + " local skills: " + ", ".join(skill_ids))
+        graph_close("Knowledge Curator", knowledge_intent, "Selected " + str(len(skill_ids)) + " curated local knowledge skills")
+        if stop.is_set():
+            raise InterruptedError()
+        llm_intent = graph_open("LLM Advisor")
         event(eid, "LLM Advisor", "running", "Sending only allowlisted service metadata to configured model.")
         advice = "Demo mode: model invocation intentionally disabled." if demo else llm_assessment(entry["model"], services)
         event(eid, "LLM Advisor", "completed", advice)
+        graph_close("LLM Advisor", llm_intent, "LLM advisory step finished without executing model suggested actions")
+        if stop.is_set():
+            raise InterruptedError()
+        verification_intent = graph_open("Verification")
         event(eid, "Verification", "running", "Checking evidence sufficiency.")
         event(eid, "Verification", "completed",
               "No vulnerabilities automatically confirmed. Open ports are observations, not findings.")
+        graph_close("Verification", verification_intent, "Evidence classified as observations without confirmed vulnerabilities")
+        report_intent = graph_open("Report Builder")
         event(eid, "Report Builder", "running", "Generating local assessment record.")
         lines = ["# SECRA VAPT Assessment", "", "Engagement: " + entry["name"],
                  "Target: " + entry["target"], "Scope: " + entry["scope"],
@@ -267,7 +325,9 @@ def pipeline(eid, stop):
         for s in services:
             lines.append("| " + str(s["port"]) + " | " + s["service"] +
                          " | " + ("SIMULATED" if demo else "Observed") + " |")
-        lines.extend(["", "## Notes", *["- " + redact(n) for n in notes],
+        lines.extend(["", "## Local pentester knowledge selection",
+                      *["- " + sid for sid in skill_ids],
+                      "", "## Notes", *["- " + redact(n) for n in notes],
                       "", "## Verification", "No vulnerability was automatically confirmed.",
                       "Human validation is required for any security conclusions.",
                       "", "## AI advisory", redact(advice),
@@ -275,6 +335,7 @@ def pipeline(eid, stop):
                       "Demo mode results are simulated." if demo else "Findings require additional manual verification."])
         set_report(eid, "\n".join(lines) + "\n")
         event(eid, "Report Builder", "completed", "Report available for local download.")
+        graph_close("Report Builder", report_intent, "Local Markdown report generated with stated assessment limitations")
         set_status(eid, "completed")
     except InterruptedError:
         set_status(eid, "cancelled")
@@ -294,7 +355,43 @@ def dashboard():
 @app.get("/api/health", dependencies=[Depends(auth)])
 def health():
     return {"status": "ok", "available_tools": {t: bool(shutil.which(t)) for t in ("nmap", "curl")},
-            "gateway_configured": bool(LLM_KEY), "mode": "local-only"}
+            "gateway_configured": bool(LLM_KEY), "mode": "local-only",
+            "knowledge_skill_count": len(knowledge_catalog()),
+            "sapper_v2_present": SAPPER_SCRIPT.is_file()}
+
+@app.get("/api/skills", dependencies=[Depends(auth)])
+def skills(search: str = ""):
+    search = search.strip().casefold()[:100]
+    result = knowledge_catalog()
+    if search:
+        result = [s for s in result if search in (s["id"] + " " + s["title"] + " " +
+                      s["category"] + " " + s["summary"]).casefold()]
+    return {"total": len(result), "skills": result}
+
+
+@app.get("/api/skills/{skill_id}", dependencies=[Depends(auth)])
+def skill_detail(skill_id: str):
+    entry = find_skill(skill_id)
+    if not entry:
+        raise HTTPException(404, "Skill not found")
+    return {"metadata": entry, "content": skill_content(skill_id)}
+
+
+@app.get("/api/engagements/{eid}/skill-selection", dependencies=[Depends(auth)])
+def selected_skills(eid: str):
+    fetch_engagement(eid)
+    return {"skills": select_skills(service_rows(eid))}
+
+
+@app.get("/api/engagements/{eid}/graph", dependencies=[Depends(auth)])
+def sapper_graph(eid: str):
+    fetch_engagement(eid)
+    try:
+        return public_graph(eid, DATA)
+    except (GraphError, ValueError):
+        return {"engine": "sapper-v2", "enabled": False, "facts": [], "intents": [],
+                "total_facts": 0, "total_intents": 0}
+
 
 @app.post("/api/privacy-preview", dependencies=[Depends(auth)])
 def privacy_preview(body: PrivacyPreview):

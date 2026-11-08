@@ -2,15 +2,16 @@
 
 ## Current implemented topology
 
-Browser dashboard -> FastAPI local API -> SQLite -> local worker -> fixed Nmap and curl subprocesses.
+Browser dashboard -> FastAPI local API -> SQLite -> local worker -> fixed Nmap/curl subprocesses; in parallel, each stage writes a fact-intent record via pinned sapper-v2 CLI. Bundled skills are routed deterministically.
 
 Agent stage monitor:
 1. Scope Guardian: validates a single IPv4 target against the authorized IP/CIDR list.
 2. Recon Agent: runs Nmap against top 20 TCP ports and normalizes observations from XML.
 3. HTTP Analyst: runs curl -I on common HTTP ports found by the scoped scan, retaining status codes only.
-4. LLM Advisor: sends a positive-allowlisted summary of numeric ports and service labels to 9Router.
-5. Verification: records evidence sufficiency, without inventing vulnerability findings.
-6. Report Builder: generates a local Markdown report.
+4. Knowledge Curator: loads reviewed local SKILL.md files selected by normalized service labels.
+5. LLM Advisor: sends vetted static methodology plus positive-allowlisted numeric ports and service labels to 9Router.
+6. Verification: records evidence sufficiency, without inventing vulnerability findings.
+7. Report Builder: generates a local Markdown report.
 
 The browser polls the backend about once every 1.35 seconds. These are honest stage transitions, NOT fabricated internal reasoning or LLM multi-agent traces.
 
@@ -24,6 +25,12 @@ Raw HTTP response -> local parsing -> status code only; no raw headers persisted
 Engagement IP/scope/reports -> SQLite plaintext on local disk; encryption at rest is not implemented.
 
 Important: deterministic field allowlisting is the main LLM privacy mechanism. Regex-only masking of arbitrary unstructured logs does not give strong privacy. Neither SECRA nor masking can guarantee what a third-party 9Router provider logs; configure provider allowlists and local models when sensitive.
+
+## Sapper-v2 integration
+
+Original upstream code (MIT) is vendored at vendor/sapper_v2/sapper.py, pinned to commit 697b30f77ebedf5e551a0595b3e883f9c25f9e73. The adapter in app/sapper_integration.py uses the actual fact-intent CLI with a minimal inherited environment, a per-engagement graph directory, and only safe fixed subcommands. Graphs are persisted across browser refreshes and displayed through the authenticated /api/engagements/{id}/graph endpoint.
+
+SECRA does not currently run upstream sapper-v2's CTF commander, general, worker swarm, flag submissions, interactive model CLI, or auto dispatch. The Tencent contest result stated by its maintainers is not a benchmark of SECRA or of this adapted workflow.
 
 ## Additional architecture research
 
