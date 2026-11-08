@@ -22,6 +22,11 @@ jobs:
           SECRA_DASHBOARD_TOKEN: ci-test-token-only
           SECRA_DATA_DIR: /tmp/secra-vapt-test
         run: python -m pytest tests/masking -q -ra
+      - name: Deterministic framing and wire-byte privacy acceptance
+        env:
+          SECRA_DASHBOARD_TOKEN: ci-test-token-only
+          SECRA_DATA_DIR: /tmp/secra-vapt-test
+        run: python -m pytest tests/framing -q -ra
       - name: Test scope, privacy, knowledge, Sapper graph and demo lifecycle
         env:
           SECRA_DASHBOARD_TOKEN: ci-test-token-only

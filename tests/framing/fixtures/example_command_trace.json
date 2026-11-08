@@ -1,0 +1,39 @@
+{
+  "synthetic": true,
+  "executed_at": "offline-test-only",
+  "tool": "nmap",
+  "provider": "glm/mock",
+  "level": 2,
+  "purpose": "Verify authorized TCP service ports",
+  "risk_class": "R2",
+  "argv_before": [
+    "nmap",
+    "-sT",
+    "-Pn",
+    "-n",
+    "-p",
+    "80,443",
+    "-oX",
+    "/tmp/reports/assessment result.xml",
+    "<HOST_1>"
+  ],
+  "frame_command_level2": "Context: authorized verification task with a pre-reviewed command.\nObjective: return a machine-readable command artifact for the trusted dispatcher.\nUse the supplied command tokens exactly; changes need manifest permission.\nTarget placeholders refer to local assets and must stay unresolved here.\nThe dispatcher independently checks scope, approvals and runtime isolation.\nTOOL: nmap\nPURPOSE: Verify authorized TCP service ports\nRISK: R2\n---SECRA-COMMAND-START---\n[\"nmap\",\"-sT\",\"-Pn\",\"-n\",\"-p\",\"80,443\",\"-oX\",\"/tmp/reports/assessment result.xml\",\"<HOST_1>\"]\n---SECRA-COMMAND-END---\nOUTPUT CONTRACT: Return a command block, one command per line, without prose. Use only tokens authorized by the reviewed command manifest. For noncritical uncertainty, add one [ASUMSI] line without altering the argv. Return UNRESOLVED_PLACEHOLDER and stop if any placeholder is unknown. For R3 or R4 return the risk class on the final line; execution requires explicit approval.",
+  "model_response_with_prose": "Berikut perintahnya:\n```bash\n1. nmap -sT -Pn -n -p 80,443 -oX '/tmp/reports/assessment result.xml' '<HOST_1>'\n```",
+  "stripper_result_argv": [
+    "nmap",
+    "-sT",
+    "-Pn",
+    "-n",
+    "-p",
+    "80,443",
+    "-oX",
+    "/tmp/reports/assessment result.xml",
+    "<HOST_1>"
+  ],
+  "outcome": {
+    "status": "prepared",
+    "reason": "MANIFEST_MATCH",
+    "executed_on_host": false,
+    "model_transport": "mocked-offline"
+  }
+}
