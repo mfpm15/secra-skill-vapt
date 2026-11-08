@@ -212,3 +212,11 @@ Required CI interfaces:
 Exit criteria: no known sensitive fixture or customer identifier crosses the model egress transport; zero untrusted text reaches shell; unknown or ambiguous content is quarantined. This is a bounded, testable property—not a claim that arbitrary regex detectors can identify every possible sensitive datum.
 
 References: https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/ and https://genai.owasp.org/glossary/prompt-injection/.
+
+## Boundary clarification: masking vs. framing
+
+- **Masking** (`app/masking/`) is deterministic local redaction of PII/secrets and the strict, canonical model-egress allowlist. It never turns raw scan results into permitted model prompts.
+- **Framing** (`app/framing/`) is deterministic presentation of an *already masking-approved* canonical service-metadata brief. It adds a static, output-oriented wrapper and a checklist contract; it neither changes commands, paths, placeholders or scope nor overrides provider safety decisions.
+- Transport checks must reconstruct the exact frame and validate the extracted canonical JSON with the unchanged Phase-1 guard before any HTTP request. The system prompt remains the existing reviewed static context.
+- Safety refusals remain terminal. Optional retries are restricted to non-safety output formatting, with a hard cap of two model calls; default is one call.
+- Audit stores only **pre-frame masked** canonical metadata and its exact framed version, plus detection codes, under private local storage. It must not store customer raw prompts, secrets, evidence, vault mappings, or unsafe model replies.
