@@ -23,7 +23,8 @@ class FramingAuditError(RuntimeError):
 def record_framing(root: str | Path, *, task_id: str, provider: str, level: int,
                    masked_brief: str, framed_prompt: str,
                    result_reason: str = "PENDING",
-                   outcome: str = "prepared") -> Path:
+                   outcome: str = "prepared",
+                   engagement_id: str | None = None) -> Path:
     if outcome not in {"prepared", "completed", "refused", "no_artifact", "failed"}:
         raise FramingAuditError("AUDIT_OUTCOME_INVALID")
     if result_reason not in {"PENDING", "ARTIFACT_PRESENT", "SAFETY_REFUSAL",
@@ -32,6 +33,9 @@ def record_framing(root: str | Path, *, task_id: str, provider: str, level: int,
         raise FramingAuditError("AUDIT_REASON_INVALID")
     try:
         uid = str(uuid.UUID(task_id))
+        if engagement_id is not None:
+            if str(uuid.UUID(engagement_id)) != engagement_id:
+                raise ValueError("engagement UUID must be canonical")
         if uid != task_id:
             raise ValueError("noncanonical UUID")
         # Validate raw canonical Phase-1 schema before writing any string.
@@ -47,7 +51,8 @@ def record_framing(root: str | Path, *, task_id: str, provider: str, level: int,
     os.chmod(root, 0o700)
     path = root / (uid + ".jsonl")
     record = {
-        "task_id": uid, "provider": provider, "level": level,
+        "task_id": uid, "engagement_id": engagement_id,
+        "provider": provider, "level": level,
         "pre_frame_masked": masked_brief,
         "framed_prompt": framed_prompt, "result_reason": result_reason,
         "outcome": outcome,
