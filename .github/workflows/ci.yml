@@ -37,6 +37,11 @@ jobs:
           SECRA_DASHBOARD_TOKEN: ci-test-token-only
           SECRA_DATA_DIR: /tmp/secra-vapt-test
         run: python -m pytest tests/framing -q -ra
+      - name: MCP tools/list, model-tool-feedback, operator UI and real localhost boot (zero skipped)
+        env:
+          SECRA_DASHBOARD_TOKEN: ci-test-token-only-12345
+          SECRA_DATA_DIR: /tmp/secra-vapt-test
+        run: python -m pytest tests/e2e -q -ra
       - name: Test scope, privacy, knowledge, Sapper graph and demo lifecycle
         env:
           SECRA_DASHBOARD_TOKEN: ci-test-token-only
