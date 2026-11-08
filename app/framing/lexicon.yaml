@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "dictionaries": {
+    "neutral": {
+      "wrapper_forbidden_terms": [
+        "exploit",
+        "bypass",
+        "payload",
+        "flag",
+        "CTF",
+        "VAPT"
+      ],
+      "note": "Only checks model-facing wrapper wording. Never changes the substance or hides an action."
+    }
+  }
+}
