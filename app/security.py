@@ -8,7 +8,7 @@ EMAIL = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 IPV4 = re.compile(r"(?<![\w.])(?:\d{1,3}\.){3}\d{1,3}(?![\w.])")
 JWT = re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}(?:\.[A-Za-z0-9_-]+)?\b")
 BEARER = re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/-]{8,}")
-SECRET = re.compile(r"(?i)\b(password|passwd|api[_-]?key|authorization|secret|access[_-]?token|private[_-]?key)\s*[:=]\s*[^\s,;]+")
+SECRET = re.compile(r"(?i)\b(password|passwd|api[_-]?key|authorization|secret|access[_-]?token|private[_-]?key|token)\s*[:=]\s*[^\s,;]+")
 DOMAIN = re.compile(r"(?<![\w@])(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}(?![\w])")
 ALLOWED_SERVICES = frozenset({"http", "https", "ssh", "smtp", "domain", "mysql", "postgresql", "ms-wbt-server", "microsoft-ds", "netbios-ssn", "ftp", "telnet", "unknown"})
 MAX_SCOPE_NETS = 32
@@ -16,8 +16,8 @@ MAX_SCOPE_NETS = 32
 def redact(value: str) -> str:
     """Best-effort UI/log masking; NOT a guarantee for arbitrary sensitive text."""
     value = str(value)[:4000]
-    value = SECRET.sub(r"\1=[REDACTED]", value)
     value = BEARER.sub("Bearer [REDACTED]", value)
+    value = SECRET.sub(r"\1=[REDACTED]", value)
     value = JWT.sub("[JWT_REDACTED]", value)
     value = EMAIL.sub("[EMAIL_REDACTED]", value)
     value = IPV4.sub("[IP_REDACTED]", value)
