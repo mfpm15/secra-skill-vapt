@@ -1,0 +1,199 @@
+{
+  "schema": 1,
+  "tools": [
+    {
+      "name": "inventory.read",
+      "description": "Read reviewed engagement metadata; never returns target address.",
+      "risk": "R0",
+      "adapter": "inventory_read",
+      "mode": "both",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      }
+    },
+    {
+      "name": "demo.nmap_scan",
+      "description": "SIMULATED offline TCP service observations; no network.",
+      "risk": "R0",
+      "adapter": "demo_nmap",
+      "mode": "demo",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      }
+    },
+    {
+      "name": "demo.httpx_probe",
+      "description": "SIMULATED offline HTTP status observation; no network.",
+      "risk": "R0",
+      "adapter": "demo_httpx",
+      "mode": "demo",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "port": {
+            "type": "integer",
+            "enum": [
+              80,
+              443,
+              8000,
+              8008,
+              8080,
+              8081,
+              8443,
+              8888,
+              3000,
+              5000,
+              9443
+            ]
+          }
+        },
+        "required": [
+          "task_id",
+          "port"
+        ]
+      }
+    },
+    {
+      "name": "report.summary",
+      "description": "Create a simulated summary from previously recorded safe observations.",
+      "risk": "R0",
+      "adapter": "report_summary",
+      "mode": "demo",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      }
+    },
+    {
+      "name": "nmap.tcp_top20",
+      "description": "Real reviewed Nmap TCP top20 through fail-closed gateway and scope enforcement.",
+      "risk": "R2",
+      "adapter": "gateway_nmap",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      }
+    },
+    {
+      "name": "curl.http_head",
+      "description": "Real HTTP HEAD through fail-closed gateway with restricted port.",
+      "risk": "R2",
+      "adapter": "gateway_curl",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "port": {
+            "type": "integer",
+            "enum": [
+              80,
+              443,
+              8000,
+              8008,
+              8080,
+              8081,
+              8443,
+              8888,
+              3000,
+              5000,
+              9443
+            ]
+          }
+        },
+        "required": [
+          "task_id",
+          "port"
+        ]
+      }
+    },
+    {
+      "name": "http.authenticated_test",
+      "description": "Requires explicit human R3 approval; not implemented as an executable adapter.",
+      "risk": "R3",
+      "adapter": "approval_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      }
+    },
+    {
+      "name": "prohibited.r4",
+      "description": "R4 is always prohibited and cannot be executed.",
+      "risk": "R4",
+      "adapter": "deny",
+      "mode": "both",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      }
+    }
+  ]
+}
