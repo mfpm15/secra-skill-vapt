@@ -1,0 +1,75 @@
+{
+  "synthetic": true,
+  "model_provider": "fake-model",
+  "execution": "none - offline parse-only fixture",
+  "kernel_fence_attested": false,
+  "tools": [
+    {
+      "tool": "nmap.tcp_top20",
+      "format": "nmap_xml",
+      "source": "nmap.xml",
+      "observations": [
+        {
+          "asset": "ASSET_001",
+          "port": 443,
+          "protocol": "tcp",
+          "state": "open",
+          "service": "https"
+        },
+        {
+          "asset": "ASSET_001",
+          "port": 22,
+          "protocol": "tcp",
+          "state": "filtered",
+          "service": "ssh"
+        }
+      ]
+    },
+    {
+      "tool": "web.httpx",
+      "format": "httpx_jsonl",
+      "source": "httpx.jsonl",
+      "observations": [
+        {
+          "asset": "ASSET_001",
+          "status": 200,
+          "port": 443,
+          "service": "https"
+        },
+        {
+          "asset": "ASSET_001",
+          "status": 404,
+          "port": 80,
+          "service": "http"
+        }
+      ]
+    },
+    {
+      "tool": "web.nuclei",
+      "format": "nuclei_jsonl",
+      "source": "nuclei.jsonl",
+      "observations": [
+        {
+          "asset": "ASSET_001",
+          "template_id": "http-missing-security-header",
+          "severity": "low",
+          "type": "http",
+          "verified": false
+        },
+        {
+          "asset": "ASSET_001",
+          "template_id": "http-custom-legacy-check",
+          "severity": "high",
+          "type": "http",
+          "verified": false
+        }
+      ]
+    }
+  ],
+  "outcome": {
+    "status": "parsed_synthetic",
+    "real_network_requests": 0,
+    "provider_calls": 0,
+    "raw_pii_forwarded": false
+  }
+}

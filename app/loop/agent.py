@@ -15,6 +15,7 @@ from app.agents.loader import load_profile, progressive_skills
 from app.mcp.dispatcher import ToolDispatcher
 from app.mcp.manifest import RISKS, ToolManifest
 from .provider import Choice, ModelError, ModelRefused, NineRouterPlanner
+from .text_fallback import TextFallbackExhausted
 from .store import TaskStore, TaskError
 
 
@@ -89,12 +90,14 @@ class AgentLoop:
             if time.monotonic() - started >= self.max_seconds:
                 return finish("exhausted", "Task exhausted: wall-clock limit reached.")
             names, skill_context = progressive_skills(profile,
-                selected_tool=prior[0] if prior else None, step=index)
+                selected_tool=prior[0] if prior else None,
+                step=index, services=observations)
             self.store.append(task_id, "skill", "", "done",
                               "Loaded reviewed skill: " + ",".join(names) + ".")
             candidates = [
                 entry for entry in self.manifest.visible(task["mode"])
                 if profile.allows(entry.name, entry.risk) and RISKS[entry.risk] <= 2
+                and entry.adapter != "catalog_only"
             ]
             try:
                 decision = llm.choose(
@@ -103,6 +106,8 @@ class AgentLoop:
                     prior=prior, services=observations)
             except ModelRefused:
                 return finish("refused", "Model declined the tool request; no action performed.")
+            except TextFallbackExhausted:
+                return finish("exhausted", "Text-only reviewed command formatting exhausted; no action executed.")
             except (ModelError, ValueError, TypeError):
                 return finish("failed", "Model planner could not produce an approved tool decision.")
             if time.monotonic() - started >= self.max_seconds:
@@ -133,6 +138,10 @@ class AgentLoop:
                 tool.validate(supplied)
             except Exception:
                 return finish("failed", "Model arguments did not match the reviewed manifest.")
+            if getattr(llm, "text_fallback_used", False):
+                self.store.append(task_id, "model", tool.name, "done",
+                                  "Text-only fallback matched exact reviewed argv; scope/fence still enforced.")
+                llm.text_fallback_used = False
             self.store.append(task_id, "model", tool.name, "requested",
                               "Model selected reviewed tool " + tool.name + ".")
             result = self.dispatcher.call(tool.name, supplied, stopper)
@@ -145,6 +154,14 @@ class AgentLoop:
             if tool.name == "demo.nmap_scan":
                 observations = [{"port": 80, "service": "http"},
                                 {"port": 443, "service": "https"}]
+            elif tool.name == "nmap.tcp_top20":
+                observations = [
+                    {"port": x["port"], "service": x["service"]}
+                    for x in result.get("observations", [])
+                    if isinstance(x, dict) and x.get("state") == "open"
+                    and type(x.get("port")) is int
+                    and isinstance(x.get("service"), str)
+                ][:30]
             if self.store.is_stopped(task_id):
                 return LoopResult(task_id, "stopped", step_count, receipts)
         return finish("exhausted", "Task exhausted: maximum " + str(self.max_steps) +

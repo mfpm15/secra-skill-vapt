@@ -4,6 +4,24 @@ A local-first, scoped VAPT operations MVP with a reviewed gateway, encrypted evi
 
 **Current scope:** single IPv4 target per engagement, top-20 TCP ports via Nmap, optional curl HTTP header checks, and advisory-only LLM analysis. **No automatic exploitation or confirmed vulnerability claims.** Demo results are clearly labeled SIMULATED. Never expose this single-user MVP directly to the internet.
 
+## Kali catalog, safe parser and kernel lab gate (under review)
+
+`app/mcp/manifest.json` now inventories **45 manifest entries**, including **36 new Kali tool entries** grouped across recon, web, API, TLS, data, authentication and miscellaneous tasks. Each declares risk R0–R4, reviewed argument *shape*, timeout, output format and expected Kali package. The original nine working/demo entries remain for backward compatibility. Most newly indexed binaries are deliberately **catalog-only**: the UI and MCP `tools/list` show them, while `tools/call` reports `BLOCKED_MISSING_BINARY` or `BLOCKED_ADAPTER_UNAVAILABLE` instead of starting an unreviewed tool. Package names are indicative and must be checked against the pinned Kali release.
+
+`app/mcp/parsers.py` parses Nmap XML, HTTPX JSONL, Nuclei JSONL, TLS protocol hints, HTTP status and several bounded summary formats, using an explicit allowlist. It also supports safe metadata-only fallback. It never exposes raw URLs, IPs, usernames, passwords, HTTP bodies or unreviewed template text to the model. Test fixtures in `tests/catalog/fixtures` are **SYNTHETIC**, not captured Kali scan proof. Nmap/curl live gateway receipts re-check the AES-GCM seal before parsing.
+
+`SECRA_FENCE_MODE` defaults to `strict`. An explicit `dev` labels the already restricted **local loopback-only** HEAD self-test as `UNFENCED LOCAL ONLY` in UI/receipt; it does **not** open external Kali tools or bypass the independently verified kernel gateway. R3 remains approval/review-only; R4 is not executable.
+
+From a **dedicated, authorized Kali VM root session**, run the real fence release gate:
+
+```bash
+SECRA_FENCE_MODE=strict ./deploy/lab-verify.sh --require-strict
+```
+
+This invokes all 13 mandatory privileged lab cases, saves private witnesses under `/var/lib/secra/evidence/fence-lab/<run-id>/`, then verifies their integrity. Any missing, failed, or unverified result yields nonzero exit. **No Kali lab evidence has been produced or verified in this development environment.** This script does not automatically issue a root-owned attestation.
+
+The optional text-only 9Router fallback accepts only unchanged, reviewed Nmap TCP/curl HEAD argv proposals through existing `frame_command`/`strip_command`; it never executes a shell string. An explicit refusal is terminal. Two attempted repairs can end in `exhausted`. No live 9Router provider account/model has been available to run a genuine provider acceptance test.
+
 ## New agent console and MCP integration (developer preview)
 
 The new single-page console is a separate localhost app; it does **not** activate the unverified Phase-2 network fence. Demo is offline, with synthetic Nmap and HTTPX observations. Use Python 3.12+, then:
@@ -32,7 +50,7 @@ python -m app.mcp.server --transport http --port 8766
 
 For stdio, let a trusted MCP client spawn the process and speak protocol over stdin/stdout (do not type interactive shell commands into it). For Streamable HTTP, use `http://127.0.0.1:8766/mcp` with `Authorization: Bearer $SECRA_DASHBOARD_TOKEN`; remote exposure, DNS-rebinding origins, and missing tokens are blocked. MCP tool schemas are exact manifest JSON Schemas. Outputs are `{status, exit_code, summary, output_ref, masked}`. `output_ref` is an `evidence://<engagement UUID>/<run UUID>` local reference—not an outbound download URL.
 
-Reviewed tools currently advertised: `inventory.read` (R0); `demo.nmap_scan` (R0, offline); `demo.httpx_probe` (R0, offline); `report.summary` (R0, offline); `local.http_head` (R2, real loopback-only HEAD); `nmap.tcp_top20` (R2, live gateway); `curl.http_head` (R2, live gateway); `http.authenticated_test` (R3, approval queue only); `prohibited.r4` (R4, always blocked). Add a new tool through an independently reviewed manifest entry and adapter stub. Agents cannot directly run arbitrary argv, install templates, use shells, or bypass the existing typed gateway.
+Core executable and backward-compatible tools (plus 36 indexed, blocked Kali catalog entries) currently advertised: `inventory.read` (R0); `demo.nmap_scan` (R0, offline); `demo.httpx_probe` (R0, offline); `report.summary` (R0, offline); `local.http_head` (R2, real loopback-only HEAD); `nmap.tcp_top20` (R2, live gateway); `curl.http_head` (R2, live gateway); `http.authenticated_test` (R3, approval queue only); `prohibited.r4` (R4, always blocked). Add a new tool through an independently reviewed manifest entry and adapter stub. Agents cannot directly run arbitrary argv, install templates, use shells, or bypass the existing typed gateway.
 
 The agent loop is bounded to **25 tool steps and 20 minutes**; a stopped, refused or exhausted task cannot silently restart. Every selected tool and masked result is written to a sequenced local event ledger. R3 approvals are review-only until a separate audited adapter is installed, and R4 stays forbidden. The existing gateway still denies live network operations **until a real Kali kernel egress attestation is present**. The real local-loopback HEAD route is implemented and tested with a fake 9Router response and a genuine localhost HTTP server, but **no live 9Router model credentials or actual provider response were available for verification**. Genuine Kali Nmap/curl execution also remains gated by kernel attestation.
 

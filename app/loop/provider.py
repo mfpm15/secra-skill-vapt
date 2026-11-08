@@ -62,6 +62,39 @@ class NineRouterPlanner:
         self.key = key if key is not None else os.environ.get("SECRA_9ROUTER_API_KEY", "")
         if not self.key:
             raise ModelError("NINEROUTER_KEY_MISSING")
+        self.text_fallback_used = False
+
+    def _send_text_prompt(self, framed: str) -> str:
+        """Only a deterministic reviewed command with an unresolved alias."""
+        if (not isinstance(framed, str) or len(framed) > 12000
+                or "SECRA-COMMAND-START" not in framed
+                or "<HOST_1>" not in framed):
+            raise ModelError("TEXT_FALLBACK_PROMPT_DENIED")
+        body = {"model": self.model, "temperature": 0.1, "max_tokens": 350,
+                "messages": [
+                    {"role": "system", "content":
+                     "You are formatting an already reviewed command proposal. "
+                     "Keep placeholder aliases unresolved, never invent flags or results. "
+                     "A trusted local dispatcher independently checks authority and scope."},
+                    {"role": "user", "content": framed},
+                ]}
+        request = urllib.request.Request(
+            self.gateway + "/chat/completions",
+            data=json.dumps(body, separators=(",", ":")).encode(),
+            headers={"Accept": "application/json", "Content-Type": "application/json",
+                     "Authorization": "Bearer " + self.key}, method="POST")
+        try:
+            with urllib.request.urlopen(request, timeout=25) as response:
+                payload = json.loads(response.read(200000))
+            answer = payload["choices"][0]["message"]
+            if answer.get("refusal"):
+                raise ModelRefused("MODEL_SAFETY_REFUSAL")
+            text = answer.get("content", "")
+            if not isinstance(text, str) or len(text) > 16384:
+                raise ModelError("TEXT_FALLBACK_RESPONSE_INVALID")
+            return text
+        except (OSError, TimeoutError, ValueError, KeyError, IndexError, TypeError) as exc:
+            raise ModelError("TEXT_FALLBACK_TRANSPORT_FAILED") from exc
 
     def choose(self, *, public_prompt: str, skills: str,
                tools: list[ToolDefinition], prior: tuple[str, str] | None,
@@ -119,7 +152,14 @@ class NineRouterPlanner:
                 raise ModelRefused("MODEL_SAFETY_REFUSAL")
             calls = message.get("tool_calls") or []
             if not calls:
-                return None
+                from .text_fallback import select_text_fallback
+                chosen = select_text_fallback(
+                    self.model, content=message.get("content", ""),
+                    tools=tools, prior=prior, services=services,
+                    send_text_prompt=self._send_text_prompt)
+                if chosen is not None:
+                    self.text_fallback_used = True
+                return chosen
             if not isinstance(calls, list) or len(calls) != 1:
                 raise ModelError("MODEL_TOOL_CALL_COUNT_INVALID")
             item = calls[0]["function"]

@@ -18,13 +18,22 @@ from app.loop.store import TaskError, TaskStore, canonical_id
 from .manifest import ManifestError, RISKS, ToolDefinition, ToolManifest
 from . import stubs
 from .loopback import run_head
+from .fence_mode import get_fence_mode, fence_label
+from .parsers import parse_tool_output
 
 
 def receipt(status: str, code: int | None, summary: str,
-            output_ref: str | None = None) -> dict:
-    return {"status": status, "exit_code": code,
-            "summary": redact(summary)[:500], "output_ref": output_ref,
-            "masked": True}
+            output_ref: str | None = None,
+            *, fence_status: str | None = None,
+            observations: list[dict] | None = None) -> dict:
+    result = {"status": status, "exit_code": code,
+              "summary": redact(summary)[:500], "output_ref": output_ref,
+              "masked": True}
+    if fence_status is not None:
+        result["fence_status"] = fence_status
+    if observations is not None:
+        result["observations"] = observations[:64]
+    return result
 
 
 class ToolDispatcher:
@@ -50,6 +59,12 @@ class ToolDispatcher:
         if tool.mode not in {"both", task["mode"]}:
             self.store.append(tid, "tool", tool.name, "denied", "Tool unavailable in this task mode.")
             return receipt("denied", None, "Tool unavailable in this task mode.")
+        if tool.adapter == "catalog_only":
+            probe = self.manifest.probe(tool.name)
+            reason = probe["status"]
+            self.store.append(tid, "tool", tool.name, "denied",
+                              "Catalog tool blocked: " + reason + ".")
+            return receipt("blocked", None, "Catalog tool blocked: " + reason + ".")
         if tool.risk in {"R3", "R4"}:
             aid = self.store.request_approval(tid, tool.name, tool.risk)
             if tool.risk == "R4":
@@ -68,7 +83,11 @@ class ToolDispatcher:
                 status, summary, reference = run_head(
                     target=task["target"], scope=task["scope"], port=args["port"],
                     vault=self.vault, engagement_id=uuid.UUID(tid))
-                result = receipt("completed", 0, summary, reference)
+                fence_status = fence_label(get_fence_mode(), local=True)
+                if fence_status == "unfenced":
+                    summary = "UNFENCED LOCAL ONLY: " + summary
+                result = receipt("completed", 0, summary, reference,
+                                 fence_status=fence_status)
                 self.store.append(tid, "tool", name, "done", result["summary"], reference)
                 return result
             adapter = getattr(stubs, tool.adapter, None)
@@ -112,6 +131,12 @@ class ToolDispatcher:
             result = self.gateway.execute(intent, target, scope, stop)
             if result.exit_code != 0:
                 raise RuntimeError("TOOL_NONZERO_EXIT")
+            # Verify authenticated evidence before any parser or model context.
+            verified = self.vault.verify_and_read(
+                uuid.UUID(task["id"]), result.run_id)["stdout"]
+            parsed = parse_tool_output(tool.name, verified, manifest=self.manifest)
+            if parsed["parse_status"] != "parsed":
+                raise RuntimeError("SEALED_OUTPUT_PARSE_REJECTED")
             if action == "nmap.tcp_top20":
                 ports = self.gateway.parse_nmap_receipt(result)
                 summary = "Reviewed Nmap: " + str(len(ports)) + " open TCP service ports."
@@ -120,8 +145,11 @@ class ToolDispatcher:
                 summary = "Reviewed HTTP HEAD status " + status + "."
             reference = "evidence://" + task["id"] + "/" + str(result.run_id)
             self.store.append(task["id"], "tool", tool.name, "done", summary, reference)
-            return receipt("completed", 0, summary, reference)
+            return receipt("completed", 0, summary, reference,
+                           fence_status="kernel_verified",
+                           observations=parsed["entries"])
         except BaseException:
             self.store.append(task["id"], "tool", tool.name, "error",
                               "Live command denied or failed inside the scoped gateway.")
-            return receipt("blocked", None, "Live command denied or failed inside the scoped gateway.")
+            return receipt("blocked", None, "Live command denied or failed inside the scoped gateway.",
+                           fence_status="blocked_until_kernel_verified")

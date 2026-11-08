@@ -19,6 +19,15 @@
         "required": [
           "task_id"
         ]
+      },
+      "metadata": {
+        "category": "local",
+        "binary": "none",
+        "kali_package": "builtin",
+        "timeout_seconds": 5,
+        "output_pattern": "metadata_json",
+        "argv_pattern": "reviewed task ID",
+        "executable": true
       }
     },
     {
@@ -39,6 +48,15 @@
         "required": [
           "task_id"
         ]
+      },
+      "metadata": {
+        "category": "demo",
+        "binary": "none",
+        "kali_package": "builtin",
+        "timeout_seconds": 5,
+        "output_pattern": "simulated_json",
+        "argv_pattern": "fixture only",
+        "executable": true
       }
     },
     {
@@ -76,6 +94,15 @@
           "task_id",
           "port"
         ]
+      },
+      "metadata": {
+        "category": "demo",
+        "binary": "none",
+        "kali_package": "builtin",
+        "timeout_seconds": 5,
+        "output_pattern": "simulated_json",
+        "argv_pattern": "fixture port only",
+        "executable": true
       }
     },
     {
@@ -96,6 +123,15 @@
         "required": [
           "task_id"
         ]
+      },
+      "metadata": {
+        "category": "report",
+        "binary": "none",
+        "kali_package": "builtin",
+        "timeout_seconds": 5,
+        "output_pattern": "simulated_json",
+        "argv_pattern": "reviewed summary only",
+        "executable": true
       }
     },
     {
@@ -122,6 +158,15 @@
           "task_id",
           "port"
         ]
+      },
+      "metadata": {
+        "category": "local",
+        "binary": "none",
+        "kali_package": "builtin",
+        "timeout_seconds": 5,
+        "output_pattern": "http_status",
+        "argv_pattern": "HEAD / on literal loopback",
+        "executable": true
       }
     },
     {
@@ -142,6 +187,15 @@
         "required": [
           "task_id"
         ]
+      },
+      "metadata": {
+        "category": "recon",
+        "binary": "nmap",
+        "kali_package": "nmap",
+        "timeout_seconds": 60,
+        "output_pattern": "nmap_xml",
+        "argv_pattern": "fixed reviewed -sT top20",
+        "executable": true
       }
     },
     {
@@ -179,6 +233,15 @@
           "task_id",
           "port"
         ]
+      },
+      "metadata": {
+        "category": "api",
+        "binary": "curl",
+        "kali_package": "curl",
+        "timeout_seconds": 10,
+        "output_pattern": "http_headers",
+        "argv_pattern": "fixed approved HEAD",
+        "executable": true
       }
     },
     {
@@ -199,6 +262,15 @@
         "required": [
           "task_id"
         ]
+      },
+      "metadata": {
+        "category": "auth",
+        "binary": "none",
+        "kali_package": "unavailable",
+        "timeout_seconds": 30,
+        "output_pattern": "auth_summary",
+        "argv_pattern": "not implemented",
+        "executable": false
       }
     },
     {
@@ -219,6 +291,1275 @@
         "required": [
           "task_id"
         ]
+      },
+      "metadata": {
+        "category": "auth",
+        "binary": "none",
+        "kali_package": "unavailable",
+        "timeout_seconds": 0,
+        "output_pattern": "generic",
+        "argv_pattern": "prohibited",
+        "executable": false
+      }
+    },
+    {
+      "name": "recon.nmap_syn",
+      "description": "SYN TCP survey, requires dedicated reviewed fence and capabilities",
+      "risk": "R2",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "recon",
+        "binary": "nmap",
+        "kali_package": "nmap",
+        "timeout_seconds": 60,
+        "output_pattern": "nmap_xml",
+        "argv_pattern": "fixed -sS -Pn -n -oX - <approved-target>",
+        "executable": false
+      }
+    },
+    {
+      "name": "recon.nmap_connect",
+      "description": "TCP connect survey; only existing nmap.tcp_top20 is executable",
+      "risk": "R2",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "recon",
+        "binary": "nmap",
+        "kali_package": "nmap",
+        "timeout_seconds": 60,
+        "output_pattern": "nmap_xml",
+        "argv_pattern": "fixed -sT -Pn -n -oX - <approved-target>",
+        "executable": false
+      }
+    },
+    {
+      "name": "recon.nmap_udp",
+      "description": "UDP survey; human approval and reviewed adapter required",
+      "risk": "R3",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "recon",
+        "binary": "nmap",
+        "kali_package": "nmap",
+        "timeout_seconds": 90,
+        "output_pattern": "nmap_xml",
+        "argv_pattern": "fixed -sU -Pn -oX - <approved-target>",
+        "executable": false
+      }
+    },
+    {
+      "name": "recon.nmap_script",
+      "description": "NSE scripts can change target state; unavailable",
+      "risk": "R3",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "recon",
+        "binary": "nmap",
+        "kali_package": "nmap",
+        "timeout_seconds": 90,
+        "output_pattern": "nmap_xml",
+        "argv_pattern": "restricted reviewed NSE templates only",
+        "executable": false
+      }
+    },
+    {
+      "name": "recon.masscan",
+      "description": "High-rate survey is not enabled",
+      "risk": "R3",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "recon",
+        "binary": "masscan",
+        "kali_package": "masscan",
+        "timeout_seconds": 60,
+        "output_pattern": "masscan_json",
+        "argv_pattern": "fixed bounded rate and approved single target",
+        "executable": false
+      }
+    },
+    {
+      "name": "recon.subfinder",
+      "description": "Passive domain discovery inventory only",
+      "risk": "R1",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "recon",
+        "binary": "subfinder",
+        "kali_package": "subfinder",
+        "timeout_seconds": 30,
+        "output_pattern": "domains_text",
+        "argv_pattern": "passive domain inventory within approved domain scope",
+        "executable": false
+      }
+    },
+    {
+      "name": "recon.amass",
+      "description": "OSINT and DNS context; no active discovery without controls",
+      "risk": "R2",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "recon",
+        "binary": "amass",
+        "kali_package": "amass",
+        "timeout_seconds": 90,
+        "output_pattern": "domains_text",
+        "argv_pattern": "passive enumeration within approved domain scope",
+        "executable": false
+      }
+    },
+    {
+      "name": "recon.dnsx",
+      "description": "DNS answers require subsequent scope validation",
+      "risk": "R2",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "recon",
+        "binary": "dnsx",
+        "kali_package": "dnsx",
+        "timeout_seconds": 30,
+        "output_pattern": "dns_jsonl",
+        "argv_pattern": "pinned resolver and scope-limited domains",
+        "executable": false
+      }
+    },
+    {
+      "name": "recon.whatweb",
+      "description": "Technology fingerprint is an observation",
+      "risk": "R2",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "recon",
+        "binary": "whatweb",
+        "kali_package": "whatweb",
+        "timeout_seconds": 30,
+        "output_pattern": "http_text",
+        "argv_pattern": "read-only technology identification",
+        "executable": false
+      }
+    },
+    {
+      "name": "recon.whois",
+      "description": "External registries may include PII",
+      "risk": "R0",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "recon",
+        "binary": "whois",
+        "kali_package": "whois",
+        "timeout_seconds": 15,
+        "output_pattern": "whois_text",
+        "argv_pattern": "read-only ownership lookup",
+        "executable": false
+      }
+    },
+    {
+      "name": "recon.dig",
+      "description": "CNAME/IP rebinding checks required",
+      "risk": "R1",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "recon",
+        "binary": "dig",
+        "kali_package": "dnsutils",
+        "timeout_seconds": 15,
+        "output_pattern": "dns_text",
+        "argv_pattern": "fixed resolver and query type",
+        "executable": false
+      }
+    },
+    {
+      "name": "web.httpx",
+      "description": "ProjectDiscovery HTTP probing",
+      "risk": "R2",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "web",
+        "binary": "httpx",
+        "kali_package": "httpx-toolkit",
+        "timeout_seconds": 30,
+        "output_pattern": "httpx_jsonl",
+        "argv_pattern": "limited -json -status-code scope host",
+        "executable": false
+      }
+    },
+    {
+      "name": "web.katana",
+      "description": "Crawling can drift out of scope",
+      "risk": "R2",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "web",
+        "binary": "katana",
+        "kali_package": "katana",
+        "timeout_seconds": 45,
+        "output_pattern": "endpoints_jsonl",
+        "argv_pattern": "bounded crawl depth and in-scope URLs",
+        "executable": false
+      }
+    },
+    {
+      "name": "web.ffuf",
+      "description": "Content enumeration requires approval",
+      "risk": "R3",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "web",
+        "binary": "ffuf",
+        "kali_package": "ffuf",
+        "timeout_seconds": 60,
+        "output_pattern": "ffuf_json",
+        "argv_pattern": "bounded rate and approved wordlist",
+        "executable": false
+      }
+    },
+    {
+      "name": "web.gobuster",
+      "description": "Content discovery requires rate and target control",
+      "risk": "R3",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "web",
+        "binary": "gobuster",
+        "kali_package": "gobuster",
+        "timeout_seconds": 60,
+        "output_pattern": "endpoints_text",
+        "argv_pattern": "bounded dictionary and in-scope URL",
+        "executable": false
+      }
+    },
+    {
+      "name": "web.feroxbuster",
+      "description": "Recursive enumeration disabled without tested controls",
+      "risk": "R3",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "web",
+        "binary": "feroxbuster",
+        "kali_package": "feroxbuster",
+        "timeout_seconds": 60,
+        "output_pattern": "endpoints_jsonl",
+        "argv_pattern": "bounded recursion and rate",
+        "executable": false
+      }
+    },
+    {
+      "name": "web.nikto",
+      "description": "Multiple requests require human review",
+      "risk": "R3",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "web",
+        "binary": "nikto",
+        "kali_package": "nikto",
+        "timeout_seconds": 75,
+        "output_pattern": "findings_text",
+        "argv_pattern": "approved read-only test set only",
+        "executable": false
+      }
+    },
+    {
+      "name": "web.nuclei",
+      "description": "Template protocols can be invasive",
+      "risk": "R3",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "web",
+        "binary": "nuclei",
+        "kali_package": "nuclei",
+        "timeout_seconds": 90,
+        "output_pattern": "nuclei_jsonl",
+        "argv_pattern": "reviewed read-only templates and -jsonl -omit-raw",
+        "executable": false
+      }
+    },
+    {
+      "name": "web.whatweb",
+      "description": "Duplicate binary listed for web workflow",
+      "risk": "R2",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "web",
+        "binary": "whatweb",
+        "kali_package": "whatweb",
+        "timeout_seconds": 30,
+        "output_pattern": "http_text",
+        "argv_pattern": "read-only banner and technology matching",
+        "executable": false
+      }
+    },
+    {
+      "name": "web.wpscan",
+      "description": "No login attacks or credential testing",
+      "risk": "R3",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "web",
+        "binary": "wpscan",
+        "kali_package": "wpscan",
+        "timeout_seconds": 60,
+        "output_pattern": "wpscan_json",
+        "argv_pattern": "enumeration restricted to authorized WordPress",
+        "executable": false
+      }
+    },
+    {
+      "name": "web.dirsearch",
+      "description": "Directory discovery requires approval",
+      "risk": "R3",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "web",
+        "binary": "dirsearch",
+        "kali_package": "dirsearch",
+        "timeout_seconds": 60,
+        "output_pattern": "endpoints_jsonl",
+        "argv_pattern": "bounded and approved dictionary",
+        "executable": false
+      }
+    },
+    {
+      "name": "api.arjun",
+      "description": "Parameter probing requires approval",
+      "risk": "R3",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "api",
+        "binary": "arjun",
+        "kali_package": "arjun",
+        "timeout_seconds": 60,
+        "output_pattern": "endpoints_jsonl",
+        "argv_pattern": "reviewed read-only parameter discovery",
+        "executable": false
+      }
+    },
+    {
+      "name": "api.kiterunner",
+      "description": "API route discovery unavailable",
+      "risk": "R3",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "api",
+        "binary": "kr",
+        "kali_package": "kiterunner",
+        "timeout_seconds": 60,
+        "output_pattern": "endpoints_jsonl",
+        "argv_pattern": "bounded approved API route list",
+        "executable": false
+      }
+    },
+    {
+      "name": "api.graphql_cop",
+      "description": "GraphQL checks may be invasive",
+      "risk": "R3",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "api",
+        "binary": "graphql-cop",
+        "kali_package": "graphql-cop",
+        "timeout_seconds": 60,
+        "output_pattern": "findings_json",
+        "argv_pattern": "approved passive schema inspections only",
+        "executable": false
+      }
+    },
+    {
+      "name": "tls.sslscan",
+      "description": "Record cipher and certificate metadata only",
+      "risk": "R2",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "tls",
+        "binary": "sslscan",
+        "kali_package": "sslscan",
+        "timeout_seconds": 45,
+        "output_pattern": "tls_text",
+        "argv_pattern": "bounded protocol handshake",
+        "executable": false
+      }
+    },
+    {
+      "name": "tls.testssl",
+      "description": "TLS scanner may trigger rate controls",
+      "risk": "R2",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "tls",
+        "binary": "testssl",
+        "kali_package": "testssl.sh",
+        "timeout_seconds": 75,
+        "output_pattern": "tls_json",
+        "argv_pattern": "read-only TLS configuration checks",
+        "executable": false
+      }
+    },
+    {
+      "name": "tls.ssh_audit",
+      "description": "No password attempts",
+      "risk": "R2",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "tls",
+        "binary": "ssh-audit",
+        "kali_package": "ssh-audit",
+        "timeout_seconds": 45,
+        "output_pattern": "ssh_json",
+        "argv_pattern": "SSH banner and algorithm negotiation",
+        "executable": false
+      }
+    },
+    {
+      "name": "data.sqlmap",
+      "description": "Automated injection attempts blocked",
+      "risk": "R4",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "data",
+        "binary": "sqlmap",
+        "kali_package": "sqlmap",
+        "timeout_seconds": 90,
+        "output_pattern": "findings_json",
+        "argv_pattern": "not enabled; manual approved engagement only",
+        "executable": false
+      }
+    },
+    {
+      "name": "data.commix",
+      "description": "Command injection attempts blocked",
+      "risk": "R4",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "data",
+        "binary": "commix",
+        "kali_package": "commix",
+        "timeout_seconds": 90,
+        "output_pattern": "findings_text",
+        "argv_pattern": "not enabled; manual approved engagement only",
+        "executable": false
+      }
+    },
+    {
+      "name": "auth.hydra",
+      "description": "Credential attack engine blocked",
+      "risk": "R4",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "auth",
+        "binary": "hydra",
+        "kali_package": "hydra",
+        "timeout_seconds": 90,
+        "output_pattern": "auth_summary",
+        "argv_pattern": "not enabled; credential attempts prohibited",
+        "executable": false
+      }
+    },
+    {
+      "name": "auth.netexec",
+      "description": "Network authentication framework blocked",
+      "risk": "R4",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "auth",
+        "binary": "netexec",
+        "kali_package": "netexec",
+        "timeout_seconds": 90,
+        "output_pattern": "auth_summary",
+        "argv_pattern": "not enabled; no credential operations",
+        "executable": false
+      }
+    },
+    {
+      "name": "auth.impacket_secretsdump",
+      "description": "Credential extraction blocked",
+      "risk": "R4",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "auth",
+        "binary": "impacket-secretsdump",
+        "kali_package": "impacket-scripts",
+        "timeout_seconds": 90,
+        "output_pattern": "auth_summary",
+        "argv_pattern": "not enabled; no secret extraction",
+        "executable": false
+      }
+    },
+    {
+      "name": "auth.impacket_getnpusers",
+      "description": "Account-focused tool blocked",
+      "risk": "R4",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "auth",
+        "binary": "GetNPUsers.py",
+        "kali_package": "impacket-scripts",
+        "timeout_seconds": 90,
+        "output_pattern": "auth_summary",
+        "argv_pattern": "not enabled; no account probing",
+        "executable": false
+      }
+    },
+    {
+      "name": "other.searchsploit",
+      "description": "Offline CVE lookup; never executes PoC",
+      "risk": "R0",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "other",
+        "binary": "searchsploit",
+        "kali_package": "exploitdb",
+        "timeout_seconds": 15,
+        "output_pattern": "searchsploit_json",
+        "argv_pattern": "local public exploit index read only",
+        "executable": false
+      }
+    },
+    {
+      "name": "other.enum4linux_ng",
+      "description": "Directory/account discovery needs review",
+      "risk": "R3",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "other",
+        "binary": "enum4linux-ng",
+        "kali_package": "enum4linux-ng",
+        "timeout_seconds": 60,
+        "output_pattern": "findings_json",
+        "argv_pattern": "read-only SMB metadata under approval",
+        "executable": false
+      }
+    },
+    {
+      "name": "other.snmpwalk",
+      "description": "SNMP queries may disclose sensitive configuration",
+      "risk": "R3",
+      "adapter": "catalog_only",
+      "mode": "live",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "asset": {
+            "type": "string",
+            "enum": [
+              "ASSET_001"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "metadata": {
+        "category": "other",
+        "binary": "snmpwalk",
+        "kali_package": "snmp",
+        "timeout_seconds": 45,
+        "output_pattern": "snmp_text",
+        "argv_pattern": "bounded OIDs and authorization",
+        "executable": false
       }
     }
   ]

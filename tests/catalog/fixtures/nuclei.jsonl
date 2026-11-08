@@ -1,0 +1,2 @@
+{"template-id":"http-missing-security-header","type":"http","matched-at":"https://private.invalid/admin?key=CANARY","info":{"severity":"low","description":"secret sensitive value"}}
+{"template-id":"http-custom-legacy-check","type":"http","matched-at":"http://192.0.2.10/","info":{"severity":"high","reference":["internal memo"]}}

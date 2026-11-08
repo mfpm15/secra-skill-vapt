@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- [SINTETIS] matches Nmap -oX format; not real Kali evidence -->
+<nmaprun scanner="nmap"><host><address addr="192.0.2.10" addrtype="ipv4"/><hostnames><hostname name="client.private.invalid"/></hostnames><ports><port protocol="tcp" portid="443"><state state="open"/><service name="https"/></port><port protocol="tcp" portid="22"><state state="filtered"/><service name="ssh"/></port></ports></host></nmaprun>
