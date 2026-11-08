@@ -1,6 +1,6 @@
 # audit-existing.md — SECRA baseline audit
 
-Scope: exact main commit 707c25f6747c641e33cfd3f2dd0422daf8bf7e76, dated 2026-11-08. All line numbers below refer to files at this commit, not later revisions. Verified against the complete Git tree (44 regular files), including the source, HTML, tests and CI workflow. Status legend: EXISTS = source is present; CALLED = execution path is wired; PROPOSED = absent from this baseline.
+Scope: exact main commit 707c25f6747c641e33cfd3f2dd0422daf8bf7e76, dated 2026-11-08. All line numbers below refer to files at this commit, not later revisions. Verified against the complete Git tree (42 regular files), including the source, HTML, tests and CI workflow. Status legend: EXISTS = source is present; CALLED = execution path is wired; PROPOSED = absent from this baseline.
 
 ## 1. Entrypoint, API and persistence — existing code
 
