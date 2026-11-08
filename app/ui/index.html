@@ -106,7 +106,7 @@ async function stream(tid,serial){
  }
  await approvals();
  const info=await api("/api/tasks/"+encodeURIComponent(tid));
- badge(info.status);
+ badge(info.status+" · "+(info.fence_mode==="dev"?"DEV UNFENCED LOCAL ONLY":"STRICT FENCE"));
  if(["completed","stopped","failed","exhausted","refused","awaiting_approval"].includes(info.status))$("stop").disabled=true;
 }
 $("start").onclick=async()=>{
