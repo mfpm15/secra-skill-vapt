@@ -277,7 +277,8 @@ def llm_assessment(model, services, engagement_id=None):
             # Audit must succeed before any network request proceeds.
             record_framing(audit_root, task_id=task_id, provider=model, level=level,
                            masked_brief=sanitized_user_message,
-                           framed_prompt=framed_user_message)
+                           framed_prompt=framed_user_message,
+                           engagement_id=engagement_id)
             request = {"model": safe_model(model), "temperature": 0.1, "max_tokens": 320,
               "messages": [
                {"role": "system", "content": LLM_SYSTEM_PREFIX + vetted_methods},
@@ -292,6 +293,7 @@ def llm_assessment(model, services, engagement_id=None):
                            masked_brief=sanitized_user_message,
                            framed_prompt=framed_user_message,
                            result_reason=previous.reason,
+                           engagement_id=engagement_id,
                            outcome=("refused" if previous.reason == "SAFETY_REFUSAL"
                                     else "no_artifact" if previous.non_artifact
                                     else "completed"))
@@ -302,7 +304,7 @@ def llm_assessment(model, services, engagement_id=None):
                 return last_response or "LLM returned no text."
         return last_response or "LLM returned no usable verification artifact."
     except (urllib.error.URLError, ValueError, KeyError, TimeoutError,
-            OSError, FramingAuditError, FramingError):
+            OSError, FramingAuditError, FramingError, EgressDeniedError):
         return "LLM request failed; no prompt or raw tool output was logged."
 
 AGENTS = ["Scope Guardian", "Recon Agent", "HTTP Analyst", "Knowledge Curator",
