@@ -9,6 +9,7 @@ from pathlib import Path
 
 
 def connect(host: str, port: int, mode: str) -> None:
+    print("LAB_PROBE_STARTED", flush=True)
     if mode == "udp":
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
             s.sendto(b"lab", (host, port))
@@ -34,6 +35,7 @@ def family(marker: str, level: int) -> None:
 
 
 def allocate() -> None:
+    print("LAB_PROBE_STARTED", flush=True)
     chunks = []
     while len(chunks) < 800:
         chunks.append(bytearray(1024 * 1024))
@@ -42,6 +44,7 @@ def allocate() -> None:
 
 
 def spin() -> None:
+    print("LAB_PROBE_STARTED", flush=True)
     until = time.monotonic() + 90
     while time.monotonic() < until:
         pass
