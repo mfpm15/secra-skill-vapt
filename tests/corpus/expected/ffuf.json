@@ -1,0 +1,1 @@
+{"commandline":"ffuf -u https://<HOST_1>/FUZZ -w words -of json","time":"2026-11-08T12:00:00Z","results":[{"input":{"FUZZ":"admin"},"position":1,"status":200,"length":84,"words":12,"lines":3,"url":"https://<HOST_1>/admin"}]}

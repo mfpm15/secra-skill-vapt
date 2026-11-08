@@ -1,0 +1,2 @@
+Nov 8 19:00:00 auth01.corp.internal sshd[101]: Failed password for invalid user test from 192.168.1.44 port 53210 ssh2
+Nov 8 19:00:01 auth01.corp.internal app[12]: email=admin@corp.example password=supersecret
