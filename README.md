@@ -1,6 +1,6 @@
 # SECRA — Local-first Agentic VAPT Operations
 
-A functional, scoped VAPT dashboard MVP with near-real-time agent progress, genuine sapper-v2 graph memory, locally curated pentester knowledge, and local Kali tooling, structured service inventory, privacy-controlled optional LLM advice through 9Router, and a downloadable Markdown report.
+A local-first, scoped VAPT operations MVP with a reviewed gateway, encrypted evidence, a bounded model-to-tool loop, a localhost MCP/agent console, synthetic offline demo, pinned Sapper-v2 graph memory and an optional privacy-controlled 9Router model connection.
 
 **Current scope:** single IPv4 target per engagement, top-20 TCP ports via Nmap, optional curl HTTP header checks, and advisory-only LLM analysis. **No automatic exploitation or confirmed vulnerability claims.** Demo results are clearly labeled SIMULATED. Never expose this single-user MVP directly to the internet.
 
@@ -51,7 +51,7 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8765 --workers 1
 Open http://127.0.0.1:8765 and enter the access token from the terminal. If you have not set a token, the app generates and prints a temporary one at startup.
 
 1. Provide engagement name, target IPv4 address and authorized IP/CIDR scope which contains the target.
-2. Choose Demo for UI testing or Live to run locally installed Nmap and curl.
+2. Choose Demo for offline UI testing. Live Nmap and curl remain blocked until independently verified OS egress attestation and approved deployment configuration are available.
 3. Confirm written authorization and click Create & Launch Assessment.
 4. Monitor seven agent stages, scrubbed logs and service observations.
 5. Download the local Markdown report when finished.
