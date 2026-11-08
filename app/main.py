@@ -143,6 +143,8 @@ def probe_http(target, scope, eid, services, stop):
             status = KALI_GATEWAY.parse_http_receipt(receipt)
             notes.append("Port " + str(port) + ": HTTP status " + status)
         except (RuntimeError, ScopeDenied, ToolDenied) as exc:
+            if stop.is_set():
+                raise InterruptedError() from exc
             # Never emit a successful assessment after the gateway denied an action.
             raise RuntimeError("HTTP_GATEWAY_FAILED") from exc
     return notes
@@ -272,6 +274,8 @@ def pipeline(eid, stop):
                       "Nmap completed: " + str(len(services)) + " open services in top 20 TCP ports.")
             except (RuntimeError, ScopeDenied, ToolDenied) as exc:
                 event(eid, "Recon Agent", "error", str(exc))
+                if stop.is_set():
+                    raise InterruptedError() from exc
                 raise RuntimeError("RECON_GATEWAY_FAILED") from exc
         save_services(eid, services, demo)
         graph_close("Recon Agent", recon_intent, "Recon stage completed with " + str(len(services)) + " reported service ports")
