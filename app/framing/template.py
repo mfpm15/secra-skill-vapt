@@ -61,7 +61,7 @@ def _load(name: str) -> dict:
 
 
 def get_profile(provider: str) -> Profile:
-    if not isinstance(provider, str) or not re.fullmatch(r"[A-Za-z0-9_.+-]{1,110}", provider):
+    if not isinstance(provider, str) or not re.fullmatch(r"[A-Za-z0-9._:/+-]{1,110}", provider):
         raise FramingError("PROVIDER_INVALID")
     config = _load("profiles.yaml")
     record = config["providers"].get(provider.split("/", 1)[0], config["default"])
