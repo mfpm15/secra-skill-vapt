@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "default": {
+    "level": 2,
+    "dictionary": "neutral",
+    "max_length": 8192,
+    "max_format_retries": 0
+  },
+  "providers": {
+    "glm": {
+      "level": 2,
+      "dictionary": "neutral",
+      "max_length": 8192,
+      "max_format_retries": 0
+    },
+    "openai": {
+      "level": 1,
+      "dictionary": "neutral",
+      "max_length": 8192,
+      "max_format_retries": 0
+    },
+    "local": {
+      "level": 0,
+      "dictionary": "neutral",
+      "max_length": 8192,
+      "max_format_retries": 0
+    }
+  }
+}
