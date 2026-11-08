@@ -45,6 +45,16 @@ def test_complete_offline_model_tool_gateway_feedback_loop(tmp_path, monkeypatch
         assert json.loads(raw)["simulated"] is True
         assert b"127.0.0.1" not in raw and b"private" not in raw
     assert all("127.0.0.1" not in x["summary"] for x in events)
+    trace = json.loads((Path(__file__).parent / "fixtures/loop_transcript.json").read_text())
+    observed = [{key: e[key] for key in ("kind", "tool", "status", "summary")} for e in events]
+    assert observed == trace["events"]
+    assert trace["synthetic"] and trace["outcome"]["tool_steps"] == result.steps
+    assert fake.context_seen[1]["prior"] == (
+        trace["model_feedback"][1]["prior"]["tool"],
+        trace["model_feedback"][1]["prior"]["summary"])
+    assert fake.context_seen[2]["prior"] == (
+        trace["model_feedback"][2]["prior"]["tool"],
+        trace["model_feedback"][2]["prior"]["summary"])
     transcript = [(e["kind"], e["tool"], e["status"]) for e in events]
     assert ("tool", "demo.nmap_scan", "done") in transcript
     assert ("tool", "demo.httpx_probe", "done") in transcript
