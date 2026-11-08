@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 from app.loop.agent import AgentLoop
 from app.loop.store import TaskStore, TaskError
 from app.mcp.dispatcher import ToolDispatcher
+from app.mcp.fence_mode import get_fence_mode
 
 DATA = Path(os.environ.get("SECRA_DATA_DIR", str(Path(__file__).resolve().parents[2] / "data")))
 TOKEN = os.environ.get("SECRA_DASHBOARD_TOKEN") or secrets.token_urlsafe(30)
@@ -115,7 +116,7 @@ def task_status(tid: str):
         raise HTTPException(404, "Unknown task") from exc
     return {"id": tid, "asset": "ASSET_001", "mode": record["mode"],
             "status": record["status"], "model": record["model"],
-            "stopped": bool(record["stop"])}
+            "stopped": bool(record["stop"]), "fence_mode": get_fence_mode()}
 
 
 @app.get("/api/tasks/{tid}/events", dependencies=[Depends(auth)])
