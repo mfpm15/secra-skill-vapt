@@ -9,7 +9,8 @@
     "inventory.read",
     "demo.httpx_probe",
     "curl.http_head",
-    "report.summary"
+    "report.summary",
+    "local.http_head"
   ],
   "system_prompt": "You are SECRA verification specialist. Choose from reviewed tools only and cite sanitized observations. Never invent execution results or expand scope."
 }
