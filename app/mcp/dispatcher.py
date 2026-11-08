@@ -19,16 +19,20 @@ from .manifest import ManifestError, RISKS, ToolDefinition, ToolManifest
 from . import stubs
 from .loopback import run_head
 from .fence_mode import get_fence_mode, fence_label
+from .parsers import parse_tool_output
 
 
 def receipt(status: str, code: int | None, summary: str,
             output_ref: str | None = None,
-            *, fence_status: str | None = None) -> dict:
+            *, fence_status: str | None = None,
+            observations: list[dict] | None = None) -> dict:
     result = {"status": status, "exit_code": code,
               "summary": redact(summary)[:500], "output_ref": output_ref,
               "masked": True}
     if fence_status is not None:
         result["fence_status"] = fence_status
+    if observations is not None:
+        result["observations"] = observations[:64]
     return result
 
 
@@ -127,6 +131,12 @@ class ToolDispatcher:
             result = self.gateway.execute(intent, target, scope, stop)
             if result.exit_code != 0:
                 raise RuntimeError("TOOL_NONZERO_EXIT")
+            # Verify authenticated evidence before any parser or model context.
+            verified = self.vault.verify_and_read(
+                uuid.UUID(task["id"]), result.run_id)["stdout"]
+            parsed = parse_tool_output(tool.name, verified, manifest=self.manifest)
+            if parsed["parse_status"] != "parsed":
+                raise RuntimeError("SEALED_OUTPUT_PARSE_REJECTED")
             if action == "nmap.tcp_top20":
                 ports = self.gateway.parse_nmap_receipt(result)
                 summary = "Reviewed Nmap: " + str(len(ports)) + " open TCP service ports."
@@ -135,7 +145,9 @@ class ToolDispatcher:
                 summary = "Reviewed HTTP HEAD status " + status + "."
             reference = "evidence://" + task["id"] + "/" + str(result.run_id)
             self.store.append(task["id"], "tool", tool.name, "done", summary, reference)
-            return receipt("completed", 0, summary, reference)
+            return receipt("completed", 0, summary, reference,
+                           fence_status="kernel_verified",
+                           observations=parsed["entries"])
         except BaseException:
             self.store.append(task["id"], "tool", tool.name, "error",
                               "Live command denied or failed inside the scoped gateway.")
