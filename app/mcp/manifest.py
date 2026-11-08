@@ -29,6 +29,8 @@ OUTPUT_SCHEMA = {
         "fence_status": {"type": "string", "enum": [
             "kernel_verified", "blocked_until_kernel_verified",
             "local_loopback_only", "unfenced"]},
+        "observations": {"type": "array", "maxItems": 64,
+                         "items": {"type": "object"}},
     },
     "required": ["status", "exit_code", "summary", "output_ref", "masked"],
 }
