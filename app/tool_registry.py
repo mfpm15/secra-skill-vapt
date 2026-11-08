@@ -36,6 +36,7 @@ class ToolPolicy:
     network_enabled: bool
     allowed_parameters: frozenset[str]
     policy_version: str = "phase2-v1"
+    max_parallel_by_asset: int = 1
 
 
 # Any future adapter must be added here in reviewed code; never load from LLM JSON.
