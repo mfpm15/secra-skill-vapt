@@ -50,9 +50,12 @@ def test_cname_rebinding_and_mapped_ipv6_denied_offline():
             validate_dns_answers(host, chain, ips, s)
 
 
-def test_root_wrapper_is_not_arbitrary_runner():
+def test_root_wrapper_is_not_arbitrary_runner(monkeypatch):
     helper = load_helper()
     denied = helper["Denied"]
+    monkeypatch.setitem(helper["command"].__globals__, "scope_manifest",
+                        lambda eid: {"target": "192.0.2.10",
+                                     "binaries": {"nmap": "a" * 64, "curl": "b" * 64}})
     with pytest.raises(denied):
         helper["command"](["exec", "--engagement", str(uuid4()), "--run",
                            str(uuid4()), "--", "/bin/sh", "-c", "id"])
@@ -62,17 +65,18 @@ def test_root_wrapper_is_not_arbitrary_runner():
         helper["command"](["--systemd-override", "anything"])
 
 
-def test_unit_argv_full_deny_both_families_and_no_dns_exception(monkeypatch):
+def test_unit_argv_full_deny_both_families_and_no_dns_exception(tmp_path, monkeypatch):
+    import os
+    import types
+    import pwd
     helper = load_helper()
-    monkeypatch.setitem(helper["systemd_argv"].__globals__, "check_directory", lambda p: None)
-    monkeypatch.setitem(helper["systemd_argv"].__globals__, "WORK", Path("/var/lib/secra/work"))
-    monkeypatch.setitem(helper["systemd_argv"].__globals__, "EVIDENCE", Path("/var/lib/secra/evidence"))
-    monkeypatch.setattr(Path, "is_dir", lambda p: True)
-    monkeypatch.setattr(Path, "is_symlink", lambda p: False)
-    class Stat:
-        st_uid = 0
-    monkeypatch.setattr(Path, "stat", lambda p: Stat())
     eid, rid = str(uuid4()), str(uuid4())
+    work = tmp_path / "work"
+    (work / eid).mkdir(parents=True)
+    monkeypatch.setitem(helper["systemd_argv"].__globals__, "check_directory", lambda p: None)
+    monkeypatch.setitem(helper["systemd_argv"].__globals__, "WORK", work)
+    monkeypatch.setitem(helper["systemd_argv"].__globals__, "EVIDENCE", tmp_path / "evidence")
+    monkeypatch.setattr(pwd, "getpwnam", lambda user: types.SimpleNamespace(pw_uid=os.getuid()))
     binary = ["/usr/bin/nmap", *helper["NMAP_FIXED"], "192.0.2.10"]
     args = helper["systemd_argv"](eid, rid, binary, {"target": "192.0.2.10"})
     assert "--scope" in args and "--uid=secra" in args
