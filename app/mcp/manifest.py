@@ -26,6 +26,9 @@ OUTPUT_SCHEMA = {
         "summary": {"type": "string"},
         "output_ref": {"type": ["string", "null"]},
         "masked": {"type": "boolean"},
+        "fence_status": {"type": "string", "enum": [
+            "kernel_verified", "blocked_until_kernel_verified",
+            "local_loopback_only", "unfenced"]},
     },
     "required": ["status", "exit_code", "summary", "output_ref", "masked"],
 }
