@@ -59,7 +59,9 @@ def index():
 @app.get("/api/tools", dependencies=[Depends(auth)])
 def tools():
     return [{"name": x.name, "risk": x.risk, "mode": x.mode,
-             "description": x.description}
+             "description": x.description,
+             "availability": DISPATCHER.manifest.probe(x.name)["status"],
+             "kali_package": (x.metadata or {}).get("kali_package", "unknown")}
             for x in DISPATCHER.manifest.visible()]
 
 
