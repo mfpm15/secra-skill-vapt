@@ -142,10 +142,9 @@ def probe_http(target, scope, eid, services, stop):
             receipt = KALI_GATEWAY.execute(intent, target, scope, stop)
             status = KALI_GATEWAY.parse_http_receipt(receipt)
             notes.append("Port " + str(port) + ": HTTP status " + status)
-        except (RuntimeError, ScopeDenied, ToolDenied):
-            notes.append("Port " + str(port) + ": HTTP probe denied or interrupted")
-            if stop.is_set():
-                break
+        except (RuntimeError, ScopeDenied, ToolDenied) as exc:
+            # Never emit a successful assessment after the gateway denied an action.
+            raise RuntimeError("HTTP_GATEWAY_FAILED") from exc
     return notes
 
 LLM_SYSTEM_PREFIX = (
@@ -273,7 +272,7 @@ def pipeline(eid, stop):
                       "Nmap completed: " + str(len(services)) + " open services in top 20 TCP ports.")
             except (RuntimeError, ScopeDenied, ToolDenied) as exc:
                 event(eid, "Recon Agent", "error", str(exc))
-                notes.append("Recon unavailable or incomplete.")
+                raise RuntimeError("RECON_GATEWAY_FAILED") from exc
         save_services(eid, services, demo)
         graph_close("Recon Agent", recon_intent, "Recon stage completed with " + str(len(services)) + " reported service ports")
         if stop.is_set():
