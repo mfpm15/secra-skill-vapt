@@ -3,7 +3,7 @@ import json
 from uuid import uuid4
 import pytest
 from app.sapper_integration import (
-    SCRIPT, GraphError, graph_store, initialize_graph, public_graph, stage_begin, stage_end
+    SCRIPT, GraphError, graph_store, initialize_graph, public_graph, stage_begin, stage_end, resolve_frontier
 )
 
 def test_vendored_sapper_v2_exists():
@@ -19,11 +19,14 @@ def test_facts_and_intents_use_upstream_sapper(tmp_path):
     assert len(pending["intents"]) == 1
     assert pending["intents"][0]["status"] == "open"
     assert pending["intents"][0]["to"] is None
+    assert intent in resolve_frontier(eid, tmp_path)["ready_ids"]
     result = stage_end(eid, tmp_path, "Recon Agent", intent, "Recon completed with 2 service ports")
     assert result.startswith("f")
     done = public_graph(eid, tmp_path)
     assert done["intents"][0]["to"] == result
     assert done["intents"][0]["status"] == "done"
+    assert resolve_frontier(eid, tmp_path)["ready_ids"] == []
+    assert resolve_frontier(eid, tmp_path)["integrity"] == "valid"
     assert done["engine"].startswith("N1nEmAn/sapper-v2")
     persisted = graph_store(eid, tmp_path) / "project.json"
     assert persisted.is_file()
