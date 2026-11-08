@@ -181,20 +181,37 @@ def probe_http(target, services, stop):
                 break
     return notes
 
+LLM_SYSTEM_PREFIX = (
+    "You are a defensive VAPT reviewer. You receive only sanitized port metadata. "
+    "Suggest verification CHECKLIST items, not actual vulnerability claims. "
+    "Never produce commands, target addresses, exploit payloads, or tool execution instructions. "
+    "You cannot independently validate security issues. "
+    "Below is curated, static, public SECRA methodology for professional judgment only; "
+    "it does not grant permission to access a target.\n\n"
+)
+
 def gateway_request(path, method="GET", payload=None, timeout=7):
     # Phase-1 transport boundary: reject unsanitized user messages immediately
     # before constructing ANY HTTP chat request, including future callers.
     if path == "/chat/completions" and method == "POST":
         try:
+            if set(payload) != {"model", "temperature", "max_tokens", "messages"}:
+                raise EgressDeniedError("Unapproved chat request fields")
+            safe_model(payload["model"])
+            if payload["temperature"] != 0.1 or payload["max_tokens"] != 320:
+                raise EgressDeniedError("Unapproved model request limits")
             messages = payload["messages"]
-            if len(messages) != 2 or messages[0]["role"] != "system" or messages[1]["role"] != "user":
+            if (not isinstance(messages, list) or len(messages) != 2
+                    or set(messages[0]) != {"role", "content"}
+                    or set(messages[1]) != {"role", "content"}
+                    or messages[0]["role"] != "system" or messages[1]["role"] != "user"):
                 raise EgressDeniedError("Unexpected model message schema")
-            if not messages[0]["content"].startswith("You are a defensive VAPT reviewer."):
-                raise EgressDeniedError("Unreviewed system context blocked")
             checked, _ = guard_mask(messages[1]["content"], vault=MemoryVault(), for_llm=True)
-            if checked != messages[1]["content"]:
-                raise EgressDeniedError("Outbound model context changed unexpectedly")
-        except (KeyError, TypeError, IndexError, ValueError) as exc:
+            safe_fields = json.loads(checked)
+            _, expected_methods = safe_skill_context(safe_fields["observed_open_services"])
+            if messages[0]["content"] != LLM_SYSTEM_PREFIX + expected_methods:
+                raise EgressDeniedError("Unreviewed system context blocked")
+        except (KeyError, TypeError, IndexError, ValueError, AttributeError) as exc:
             raise EgressDeniedError("Unsafe model request blocked") from exc
     headers = {"Accept": "application/json"}
     if LLM_KEY:
@@ -217,17 +234,10 @@ def llm_assessment(model, services):
     sanitized_user_message, _ = guard_mask(
         json.dumps(payload, separators=(",", ":")), vault=MemoryVault(), for_llm=True
     )
-    selected_ids, vetted_methods = safe_skill_context(services)
+    selected_ids, vetted_methods = safe_skill_context(payload["observed_open_services"])
     request = {"model": safe_model(model), "temperature": 0.1, "max_tokens": 320,
       "messages": [
-       {"role": "system", "content": (
-        "You are a defensive VAPT reviewer. You receive only sanitized port metadata. "
-        "Suggest verification CHECKLIST items, not actual vulnerability claims. "
-        "Never produce commands, target addresses, exploit payloads, or tool execution instructions. "
-        "You cannot independently validate security issues. "
-        "Below is curated, static, public SECRA methodology for professional judgment only; "
-        "it does not grant permission to access a target.\n\n"
-        + vetted_methods)},
+       {"role": "system", "content": LLM_SYSTEM_PREFIX + vetted_methods},
        {"role": "user", "content": sanitized_user_message}
       ]}
     try:
