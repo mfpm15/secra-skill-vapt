@@ -27,7 +27,7 @@ from .evidence_vault import EvidenceVault, EvidenceError, _private_dir
 from .masking import MemoryVault, guard_mask
 from .scope_guard import ScopePolicy, ScopeDenied, authorized_target, enforce_scope_per_connection, fixed_http_url
 from .tool_registry import (HTTP_PORTS, TOP20_TCP, StructuredToolIntent, ToolDenied,
-                            ToolPolicy, validate_tool_intent)
+                            ToolPolicy, REGISTRY, validate_tool_intent)
 
 
 class GatewayError(RuntimeError):
@@ -93,9 +93,15 @@ class AuditLedger:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 engagement TEXT NOT NULL, request TEXT NOT NULL,
                 run TEXT NOT NULL, action TEXT NOT NULL,
+                agent TEXT NOT NULL DEFAULT 'unreviewed', approval_id TEXT,
                 outcome TEXT NOT NULL, policy_version TEXT NOT NULL,
                 scope_version INTEGER NOT NULL,
                 evidence_sha256 TEXT, utc TEXT NOT NULL)""")
+            existing = {row[1] for row in db.execute("PRAGMA table_info(events)")}
+            if "agent" not in existing:
+                db.execute("ALTER TABLE events ADD COLUMN agent TEXT NOT NULL DEFAULT 'unreviewed'")
+            if "approval_id" not in existing:
+                db.execute("ALTER TABLE events ADD COLUMN approval_id TEXT")
         os.chmod(self.path, 0o600)
 
     def _connect(self):
@@ -114,18 +120,24 @@ class AuditLedger:
             raise GatewayError("AUDIT_UNAVAILABLE") from exc
 
     def emit(self, engagement: UUID, request: UUID, run: UUID, action: str,
-             outcome: str, scope_version: int, sha256: str | None = None) -> None:
+             outcome: str, scope_version: int, sha256: str | None = None,
+             *, agent_id: str = "unreviewed", approval_id: str | None = None) -> None:
         if outcome not in self.OUTCOMES:
             raise GatewayError("AUDIT_OUTCOME_UNKNOWN")
         # Action is a hardcoded canonical value, never arbitrary agent content.
         action = action if action in {"nmap.tcp_top20", "curl.http_head"} else "unreviewed"
+        agent_id = (agent_id if isinstance(agent_id, str)
+                    and re.fullmatch(r"[A-Za-z0-9_-]{1,64}", agent_id)
+                    else "unreviewed")
+        if approval_id is not None:
+            raise GatewayError("UNREVIEWED_APPROVAL_REFERENCE")
         try:
             with self._connect() as db:
                 db.execute("""INSERT INTO events
-                    (engagement,request,run,action,outcome,policy_version,scope_version,evidence_sha256,utc)
-                    VALUES (?,?,?,?,?,?,?,?,strftime('%Y-%m-%dT%H:%M:%fZ','now'))""",
+                    (engagement,request,run,action,agent,approval_id,outcome,policy_version,scope_version,evidence_sha256,utc)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,strftime('%Y-%m-%dT%H:%M:%fZ','now'))""",
                            (str(engagement), str(request), str(run), action,
-                            outcome, "phase2-v1", scope_version, sha256))
+                            agent_id, None, outcome, "phase2-v1", scope_version, sha256))
         except sqlite3.Error as exc:
             raise GatewayError("AUDIT_UNAVAILABLE") from exc
 
@@ -212,7 +224,7 @@ class ToolGateway:
             environment = {"PATH": "/usr/bin:/bin", "HOME": "/nonexistent",
                            "LC_ALL": "C", "LANG": "C"}
             self.audit.emit(intent.engagement_id, intent.request_id, run_id,
-                            spec.action_id, "EXECUTION_STARTED", 1)
+                            spec.action_id, "EXECUTION_STARTED", 1, agent_id=intent.agent_id)
             process = subprocess.Popen(argv, shell=False, stdin=subprocess.DEVNULL,
                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                        start_new_session=True, cwd="/", env=environment)
@@ -241,10 +253,10 @@ class ToolGateway:
             code = process.wait(timeout=1)
             digest, count = writer.finish()
             self.audit.emit(intent.engagement_id, intent.request_id, run_id,
-                            spec.action_id, "SEALED", 1, digest)
+                            spec.action_id, "SEALED", 1, digest, agent_id=intent.agent_id)
             self.audit.emit(intent.engagement_id, intent.request_id, run_id,
                             spec.action_id, "COMPLETED" if code == 0 else "EXECUTION_FAILED",
-                            1, digest)
+                            1, digest, agent_id=intent.agent_id)
             return ToolReceipt(run_id, intent.engagement_id, intent.request_id,
                                spec.action_id, code, digest, count,
                                int((time.monotonic() - started) * 1000))
@@ -262,7 +274,7 @@ class ToolGateway:
                        "EVIDENCE_FAILED" if isinstance(exc, (EvidenceError, OSError)) else
                        "EXECUTION_FAILED")
             self.audit.emit(intent.engagement_id, intent.request_id, run_id,
-                            spec.action_id, outcome, 1)
+                            spec.action_id, outcome, 1, agent_id=intent.agent_id)
             raise
         finally:
             selector.close()
@@ -280,12 +292,15 @@ class ToolGateway:
         run_id = uuid.uuid4()
         self.audit.reserve(intent.engagement_id, intent.request_id, run_id)
         self.audit.emit(intent.engagement_id, intent.request_id, run_id,
-                        intent.action_id, "REQUESTED", 1)
+                        intent.action_id, "REQUESTED", 1, agent_id=intent.agent_id)
         try:
             spec = validate_tool_intent(intent)
         except ToolDenied:
+            decision = ("APPROVAL_BLOCKED" if intent.action_id in REGISTRY
+                        and REGISTRY[intent.action_id].risk == "R3"
+                        else "POLICY_BLOCKED")
             self.audit.emit(intent.engagement_id, intent.request_id, run_id,
-                            intent.action_id, "POLICY_BLOCKED", 1)
+                            intent.action_id, decision, 1, agent_id=intent.agent_id)
             raise
         try:
             ports = TOP20_TCP if intent.action_id == "nmap.tcp_top20" else (intent.parameters["port"],)
@@ -294,10 +309,10 @@ class ToolGateway:
             for port in ports:
                 enforce_scope_per_connection(resolved, resolved, port, policy)
             self.audit.emit(intent.engagement_id, intent.request_id, run_id,
-                            intent.action_id, "VALIDATED", policy.version)
+                            intent.action_id, "VALIDATED", policy.version, agent_id=intent.agent_id)
         except ScopeDenied:
             self.audit.emit(intent.engagement_id, intent.request_id, run_id,
-                            intent.action_id, "SCOPE_BLOCKED", 1)
+                            intent.action_id, "SCOPE_BLOCKED", 1, agent_id=intent.agent_id)
             raise
         try:
             # No network operation until a *real* OS egress fence implementation
@@ -307,7 +322,7 @@ class ToolGateway:
             argv = self.fence.wrap(argv)
         except (GatewayError, OSError):
             self.audit.emit(intent.engagement_id, intent.request_id, run_id,
-                            intent.action_id, "FENCE_BLOCKED", policy.version)
+                            intent.action_id, "FENCE_BLOCKED", policy.version, agent_id=intent.agent_id)
             raise
         asset_key = str(intent.engagement_id) + ":" + resolved
         with self._lock:
@@ -316,7 +331,7 @@ class ToolGateway:
             asset_lock = self._asset_locks.setdefault(asset_key, threading.Lock())
         if not asset_lock.acquire(blocking=False):
             self.audit.emit(intent.engagement_id, intent.request_id, run_id,
-                            spec.action_id, "ASSET_BUSY", policy.version)
+                            spec.action_id, "ASSET_BUSY", policy.version, agent_id=intent.agent_id)
             raise GatewayError("ASSET_BUSY")
         try:
             return self._run_fixed_process(argv, intent, spec, run_id, stop)
