@@ -66,13 +66,15 @@ class TaskStore:
 
     def create(self, target: str, scope: str, *, mode: str = "demo",
                model: str = "", authorized: bool = False) -> str:
-        if not authorized or mode not in {"demo", "live"}:
+        if not authorized or mode not in {"demo", "live", "local"}:
             raise TaskError("WRITTEN_AUTHORIZATION_REQUIRED")
         if not isinstance(target, str) or not isinstance(scope, str):
             raise TaskError("TARGET_SCOPE_INVALID")
         try:
-            if mode == "demo" and target == "127.0.0.1" and scope == "127.0.0.1/32":
+            if mode in {"demo", "local"} and target == "127.0.0.1" and scope == "127.0.0.1/32":
                 checked = target
+            elif mode == "local":
+                raise TaskError("LOCAL_ONLY_127_0_0_1")
             else:
                 checked, _ = validate_scope(target, scope)
         except ValueError as exc:
