@@ -138,7 +138,16 @@ def unit_name(run_id: str) -> str:
 def systemd_argv(eid: str, run_id: str, argv: list[str], manifest: dict) -> list[str]:
     """Do not use sudo/systemd-run as a general-purpose command interpreter."""
     check_directory(WORK)
-    check_directory(EVIDENCE)
+    # Evidence spool belongs to the unprivileged gateway identity (secra-api).
+    # The active scan identity 'secra' may NOT read raw evidence despite
+    # ReadWritePaths listing its path in the mount namespace.
+    if EVIDENCE.is_symlink() or not EVIDENCE.is_dir():
+        raise Denied("EVIDENCE_DIRECTORY_UNSAFE")
+    ev_stat = EVIDENCE.stat()
+    api_uid = __import__("pwd").getpwnam("secra-api").pw_uid
+    if (ev_stat.st_uid != api_uid or ev_stat.st_mode & 0o077
+            or EVIDENCE.parent.is_symlink()):
+        raise Denied("EVIDENCE_DIRECTORY_PERMISSIONS")
     work_dir = WORK / eid
     if work_dir.is_symlink() or not work_dir.is_dir():
         raise Denied("WORKSPACE_MISSING")
