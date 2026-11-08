@@ -15,7 +15,7 @@ from jsonschema import Draft202012Validator
 DEFAULT_MANIFEST = Path(__file__).with_name("manifest.json")
 ADAPTERS = frozenset({"inventory_read", "demo_nmap", "demo_httpx",
                       "report_summary", "gateway_nmap", "gateway_curl",
-                      "approval_only", "deny"})
+                      "approval_only", "deny", "loopback_head"})
 RISKS = {"R0": 0, "R1": 1, "R2": 2, "R3": 3, "R4": 4}
 OUTPUT_SCHEMA = {
     "type": "object", "additionalProperties": False,
@@ -66,7 +66,7 @@ class ToolManifest:
             name = item["name"]
             if (not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9_.-]{1,100}", name)
                     or name in self.tools or item["risk"] not in RISKS
-                    or item["adapter"] not in ADAPTERS or item["mode"] not in {"demo", "live", "both"}
+                    or item["adapter"] not in ADAPTERS or item["mode"] not in {"demo", "live", "local", "both"}
                     or not isinstance(item["description"], str)
                     or not 1 <= len(item["description"]) <= 240):
                 raise ManifestError("MANIFEST_ENTRY_DENIED")
