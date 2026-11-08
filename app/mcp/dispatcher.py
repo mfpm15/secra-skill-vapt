@@ -18,13 +18,18 @@ from app.loop.store import TaskError, TaskStore, canonical_id
 from .manifest import ManifestError, RISKS, ToolDefinition, ToolManifest
 from . import stubs
 from .loopback import run_head
+from .fence_mode import get_fence_mode, fence_label
 
 
 def receipt(status: str, code: int | None, summary: str,
-            output_ref: str | None = None) -> dict:
-    return {"status": status, "exit_code": code,
-            "summary": redact(summary)[:500], "output_ref": output_ref,
-            "masked": True}
+            output_ref: str | None = None,
+            *, fence_status: str | None = None) -> dict:
+    result = {"status": status, "exit_code": code,
+              "summary": redact(summary)[:500], "output_ref": output_ref,
+              "masked": True}
+    if fence_status is not None:
+        result["fence_status"] = fence_status
+    return result
 
 
 class ToolDispatcher:
@@ -74,7 +79,11 @@ class ToolDispatcher:
                 status, summary, reference = run_head(
                     target=task["target"], scope=task["scope"], port=args["port"],
                     vault=self.vault, engagement_id=uuid.UUID(tid))
-                result = receipt("completed", 0, summary, reference)
+                fence_status = fence_label(get_fence_mode(), local=True)
+                if fence_status == "unfenced":
+                    summary = "UNFENCED LOCAL ONLY: " + summary
+                result = receipt("completed", 0, summary, reference,
+                                 fence_status=fence_status)
                 self.store.append(tid, "tool", name, "done", result["summary"], reference)
                 return result
             adapter = getattr(stubs, tool.adapter, None)
@@ -130,4 +139,5 @@ class ToolDispatcher:
         except BaseException:
             self.store.append(task["id"], "tool", tool.name, "error",
                               "Live command denied or failed inside the scoped gateway.")
-            return receipt("blocked", None, "Live command denied or failed inside the scoped gateway.")
+            return receipt("blocked", None, "Live command denied or failed inside the scoped gateway.",
+                           fence_status="blocked_until_kernel_verified")
