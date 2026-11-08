@@ -89,12 +89,14 @@ class AgentLoop:
             if time.monotonic() - started >= self.max_seconds:
                 return finish("exhausted", "Task exhausted: wall-clock limit reached.")
             names, skill_context = progressive_skills(profile,
-                selected_tool=prior[0] if prior else None, step=index)
+                selected_tool=prior[0] if prior else None,
+                step=index, services=observations)
             self.store.append(task_id, "skill", "", "done",
                               "Loaded reviewed skill: " + ",".join(names) + ".")
             candidates = [
                 entry for entry in self.manifest.visible(task["mode"])
                 if profile.allows(entry.name, entry.risk) and RISKS[entry.risk] <= 2
+                and entry.adapter != "catalog_only"
             ]
             try:
                 decision = llm.choose(
