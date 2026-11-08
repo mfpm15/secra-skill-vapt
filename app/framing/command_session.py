@@ -59,7 +59,8 @@ def _audit(root: Path, task_id: str, event: dict) -> Path:
 
 
 def prepare_command(manifest: CommandSpec, provider: str, generate: Callable[[str], str],
-                    audit_root: str | Path, *, task_id: str | None = None) -> CommandPlan:
+                    audit_root: str | Path, *, task_id: str | None = None,
+                    previous_summary: str | None = None) -> CommandPlan:
     """A bounded *format* loop; no retry after refusal and no synthetic argv."""
     if not isinstance(manifest, CommandSpec) or not callable(generate):
         raise ValueError("COMMAND_MANIFEST_OR_CALLBACK_INVALID")
@@ -78,7 +79,9 @@ def prepare_command(manifest: CommandSpec, provider: str, generate: Callable[[st
         if level is None:
             break
         framed = frame_command(manifest.tool, manifest.argv, level, provider,
-                               purpose=manifest.purpose, risk_class=manifest.risk_class)
+                               purpose=manifest.purpose, risk_class=manifest.risk_class,
+                               previous_summary=previous_summary,
+                               registered_placeholders=manifest.registered_placeholders)
         _audit(root, tid, {
             "task_id": tid, "status": "requested", "level": level, "provider": provider,
             "masked_argv": list(manifest.argv), "framed_command": framed,
