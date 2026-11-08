@@ -56,6 +56,7 @@ class CommandSpec:
     purpose: str
     risk_class: str
     variants: tuple[tuple[str, ...], ...] = ()
+    registered_placeholders: frozenset[str] = frozenset({"<HOST_1>"})
 
     def __post_init__(self):
         if self.tool not in KNOWN_TOOLS:
@@ -72,6 +73,11 @@ class CommandSpec:
             raise FramingError("COMMAND_RISK_INVALID")
         if len(self.variants) > 8:
             raise FramingError("COMMAND_VARIANTS_INVALID")
+        if (not isinstance(self.registered_placeholders, frozenset)
+                or not 1 <= len(self.registered_placeholders) <= 32
+                or any(not re.fullmatch(r"<(?:HOST|IP)_[1-9][0-9]*>", name)
+                       for name in self.registered_placeholders)):
+            raise FramingError("COMMAND_PLACEHOLDER_REGISTRY_INVALID")
         for candidate in (self.argv, *self.variants):
             if (not isinstance(candidate, tuple) or not candidate
                     or candidate[0] != self.argv[0]):
@@ -92,7 +98,7 @@ class CommandSpec:
                 if re.search(r"(?i)https?://(?!<HOST_[1-9][0-9]*>[/:\s]|<IP_[1-9][0-9]*>[/:\s])", token):
                     raise FramingError("COMMAND_RAW_URL_DENIED")
                 for placeholder in re.findall(r"<[^<>\s]{1,100}>", token):
-                    if not re.fullmatch(r"<(?:HOST|IP)_[1-9][0-9]*>", placeholder):
+                    if placeholder not in self.registered_placeholders:
                         raise FramingError("COMMAND_PLACEHOLDER_UNKNOWN")
             self._review_argv(candidate)
 
@@ -160,9 +166,11 @@ def _check_command_wrapper(level: int, dictionary: str) -> None:
 def frame_command(tool: str, argv: Sequence[str], level: int, provider: str,
                   *, purpose: str = "Verify an authorized service endpoint",
                   risk_class: str = "R2",
-                  previous_summary: str | None = None) -> str:
+                  previous_summary: str | None = None,
+                  registered_placeholders: frozenset[str] = frozenset({"<HOST_1>"})) -> str:
     """Preserve argv by JSON-encoding the original list; no paraphrases or shell."""
-    spec = CommandSpec(tool, tuple(argv), purpose, risk_class)
+    spec = CommandSpec(tool, tuple(argv), purpose, risk_class,
+                       registered_placeholders=registered_placeholders)
     profile = get_profile(provider)
     _check_command_wrapper(level, profile.dictionary)
     data = json.dumps(list(spec.argv), ensure_ascii=True, separators=(",", ":"))
