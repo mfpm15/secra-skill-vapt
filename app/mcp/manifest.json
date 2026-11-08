@@ -100,7 +100,7 @@
     },
     {
       "name": "local.http_head",
-      "description": "Real HTTP HEAD to literal 127.0.0.1 only, no DNS or redirect; explicitly authorized local mode.",
+      "description": "Real HTTP HEAD to operator-authorized loopback only, without DNS or redirects; local mode only.",
       "risk": "R2",
       "adapter": "loopback_head",
       "mode": "local",
