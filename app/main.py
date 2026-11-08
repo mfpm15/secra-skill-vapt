@@ -21,6 +21,7 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 from .knowledge import catalog as knowledge_catalog, content as skill_content, find_skill, select_skills, safe_skill_context
+from .masking import guard_mask, MemoryVault, EgressDeniedError
 from .sapper_integration import GraphError, SCRIPT as SAPPER_SCRIPT, initialize_graph, stage_begin, stage_end, public_graph, resolve_frontier
 
 from .security import (
@@ -181,6 +182,20 @@ def probe_http(target, services, stop):
     return notes
 
 def gateway_request(path, method="GET", payload=None, timeout=7):
+    # Phase-1 transport boundary: reject unsanitized user messages immediately
+    # before constructing ANY HTTP chat request, including future callers.
+    if path == "/chat/completions" and method == "POST":
+        try:
+            messages = payload["messages"]
+            if len(messages) != 2 or messages[0]["role"] != "system" or messages[1]["role"] != "user":
+                raise EgressDeniedError("Unexpected model message schema")
+            if not messages[0]["content"].startswith("You are a defensive VAPT reviewer."):
+                raise EgressDeniedError("Unreviewed system context blocked")
+            checked, _ = guard_mask(messages[1]["content"], vault=MemoryVault(), for_llm=True)
+            if checked != messages[1]["content"]:
+                raise EgressDeniedError("Outbound model context changed unexpectedly")
+        except (KeyError, TypeError, IndexError, ValueError) as exc:
+            raise EgressDeniedError("Unsafe model request blocked") from exc
     headers = {"Accept": "application/json"}
     if LLM_KEY:
         headers["Authorization"] = "Bearer " + LLM_KEY
@@ -199,6 +214,9 @@ def llm_assessment(model, services):
         return "LLM skipped: configure SECRA_9ROUTER_API_KEY locally."
     payload = llm_safe_payload(services)
     assert_no_sensitive_payload(payload)
+    sanitized_user_message, _ = guard_mask(
+        json.dumps(payload, separators=(",", ":")), vault=MemoryVault(), for_llm=True
+    )
     selected_ids, vetted_methods = safe_skill_context(services)
     request = {"model": safe_model(model), "temperature": 0.1, "max_tokens": 320,
       "messages": [
@@ -210,7 +228,7 @@ def llm_assessment(model, services):
         "Below is curated, static, public SECRA methodology for professional judgment only; "
         "it does not grant permission to access a target.\n\n"
         + vetted_methods)},
-       {"role": "user", "content": json.dumps(payload, separators=(",", ":"))}
+       {"role": "user", "content": sanitized_user_message}
       ]}
     try:
         result = gateway_request("/chat/completions", "POST", request, timeout=25)
