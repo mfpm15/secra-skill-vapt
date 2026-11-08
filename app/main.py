@@ -23,6 +23,9 @@ from .masking import guard_mask, MemoryVault, EgressDeniedError
 from .tool_gateway import ToolGateway
 from .tool_registry import StructuredToolIntent, HTTP_PORTS, ToolDenied
 from .scope_guard import ScopeDenied
+from .framing import (frame, unframe, get_profile, detect, FormatLadder,
+                      FramingError)
+from .framing.audit import record_framing, FramingAuditError
 from .sapper_integration import GraphError, SCRIPT as SAPPER_SCRIPT, initialize_graph, stage_begin, stage_end, public_graph, resolve_frontier
 
 from .security import (
@@ -174,7 +177,25 @@ def gateway_request(path, method="GET", payload=None, timeout=7):
                     or set(messages[1]) != {"role", "content"}
                     or messages[0]["role"] != "system" or messages[1]["role"] != "user"):
                 raise EgressDeniedError("Unexpected model message schema")
-            checked, _ = guard_mask(messages[1]["content"], vault=MemoryVault(), for_llm=True)
+            # Phase-1 egress remains authoritative: framed messages must
+            # reconstruct to exactly the same canonical sanitized JSON.
+            user_content = messages[1]["content"]
+            try:
+                checked, _ = guard_mask(user_content, vault=MemoryVault(), for_llm=True)
+            except EgressDeniedError as exc:
+                profile = get_profile(payload["model"])
+                checked = None
+                for level in range(profile.level, min(3, profile.level + profile.max_format_retries) + 1):
+                    try:
+                        candidate = unframe(user_content, level, payload["model"])
+                    except FramingError:
+                        continue
+                    checked, _ = guard_mask(candidate, vault=MemoryVault(), for_llm=True)
+                    if checked != candidate:
+                        raise EgressDeniedError("Framed metadata changed during masking")
+                    break
+                if checked is None:
+                    raise EgressDeniedError("Unapproved framing or unsafe model payload") from exc
             safe_fields = json.loads(checked)
             _, expected_methods = safe_skill_context(safe_fields["observed_open_services"])
             if messages[0]["content"] != LLM_SYSTEM_PREFIX + expected_methods:
@@ -192,7 +213,12 @@ def gateway_request(path, method="GET", payload=None, timeout=7):
     with urllib.request.urlopen(request, timeout=timeout) as response:
         return json.loads(response.read(400000))
 
-def llm_assessment(model, services):
+def llm_assessment(model, services, engagement_id=None):
+    """Model sees only schema-allowed metadata plus an exact deterministic frame.
+
+    A refusal is terminal: never change wording to evade provider safety controls.
+    Optional retry is for non-safety output-format failures, never tool execution.
+    """
     if not model:
         return "LLM skipped: no model selected."
     if not LLM_KEY:
@@ -203,18 +229,50 @@ def llm_assessment(model, services):
         json.dumps(payload, separators=(",", ":")), vault=MemoryVault(), for_llm=True
     )
     selected_ids, vetted_methods = safe_skill_context(payload["observed_open_services"])
-    request = {"model": safe_model(model), "temperature": 0.1, "max_tokens": 320,
-      "messages": [
-       {"role": "system", "content": LLM_SYSTEM_PREFIX + vetted_methods},
-       {"role": "user", "content": sanitized_user_message}
-      ]}
+    task_id = str(uuid.uuid4())
+    profile = get_profile(model)
+    ladder = FormatLadder(profile.level, max_attempts=1 + profile.max_format_retries)
+    audit_root = DATA / "framing-events"
+    previous = None
+    last_response = ""
     try:
-        result = gateway_request("/chat/completions", "POST", request, timeout=25)
-        content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
-        if not isinstance(content, str):
-            return "LLM returned no text."
-        return redact(content[:1400])
-    except (urllib.error.URLError, ValueError, KeyError, TimeoutError, OSError):
+        while True:
+            level = ladder.next_level(previous)
+            if level is None:
+                break
+            framed_user_message = frame(sanitized_user_message, level, model)
+            # The saved "pre_frame_masked" is NOT raw customer input.
+            # Audit must succeed before any network request proceeds.
+            record_framing(audit_root, task_id=task_id, provider=model, level=level,
+                           masked_brief=sanitized_user_message,
+                           framed_prompt=framed_user_message,
+                           engagement_id=engagement_id)
+            request = {"model": safe_model(model), "temperature": 0.1, "max_tokens": 320,
+              "messages": [
+               {"role": "system", "content": LLM_SYSTEM_PREFIX + vetted_methods},
+               {"role": "user", "content": framed_user_message}
+              ]}
+            result = gateway_request("/chat/completions", "POST", request, timeout=25)
+            message = result.get("choices", [{}])[0].get("message", {})
+            content = message.get("content", "")
+            provider_refusal = bool(message.get("refusal"))
+            previous = detect(content, provider_refusal=provider_refusal)
+            record_framing(audit_root, task_id=task_id, provider=model, level=level,
+                           masked_brief=sanitized_user_message,
+                           framed_prompt=framed_user_message,
+                           result_reason=previous.reason,
+                           engagement_id=engagement_id,
+                           outcome=("refused" if previous.reason == "SAFETY_REFUSAL"
+                                    else "no_artifact" if previous.non_artifact
+                                    else "completed"))
+            if not isinstance(content, str):
+                content = ""
+            last_response = redact(content[:1400])
+            if not previous.non_artifact or not previous.retryable:
+                return last_response or "LLM returned no text."
+        return last_response or "LLM returned no usable verification artifact."
+    except (urllib.error.URLError, ValueError, KeyError, TimeoutError,
+            OSError, FramingAuditError, FramingError, EgressDeniedError):
         return "LLM request failed; no prompt or raw tool output was logged."
 
 AGENTS = ["Scope Guardian", "Recon Agent", "HTTP Analyst", "Knowledge Curator",
@@ -304,7 +362,7 @@ def pipeline(eid, stop):
             raise InterruptedError()
         llm_intent = graph_open("LLM Advisor")
         event(eid, "LLM Advisor", "running", "Sending only allowlisted service metadata to configured model.")
-        advice = "Demo mode: model invocation intentionally disabled." if demo else llm_assessment(entry["model"], services)
+        advice = "Demo mode: model invocation intentionally disabled." if demo else llm_assessment(entry["model"], services, eid)
         event(eid, "LLM Advisor", "completed", advice)
         graph_close("LLM Advisor", llm_intent, "LLM advisory step finished without executing model suggested actions")
         if stop.is_set():
