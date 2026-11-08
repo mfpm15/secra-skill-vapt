@@ -43,7 +43,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <label for="token">Operator token</label><input id="token" type="password" placeholder="Token displayed in local terminal" autocomplete="off">
 <label for="target">Authorized target</label><input id="target" value="127.0.0.1" spellcheck="false">
 <label for="scope">Explicit scope / CIDR</label><input id="scope" value="127.0.0.1/32" spellcheck="false">
-<label for="mode">Mode</label><select id="mode"><option value="demo">Offline demo · zero network</option><option value="live">Live · fenced gateway only</option></select>
+<label for="mode">Mode</label><select id="mode"><option value="demo">Offline demo · zero network</option><option value="live">Live · fenced gateway only</option><option value="local">Real local HTTP HEAD · 127.0.0.1 only</option></select>
 <label for="model">9Router model ID (blank = fake model in demo)</label><input id="model" placeholder="e.g. glm/model" autocomplete="off" spellcheck="false">
 <div class="checkline"><input id="authorized" type="checkbox"><span>I confirm explicit written authorization for the supplied scope.</span></div>
 <div class="actions"><button id="start" class="primary">Start task</button><button id="stop" class="danger" disabled>Stop</button></div>
@@ -120,5 +120,5 @@ $("start").onclick=async()=>{
  }catch(e){badge("Error");$("notice").textContent=e.message;}finally{$("start").disabled=false;}
 };
 $("stop").onclick=async()=>{if(!task)return;try{await api("/api/tasks/"+encodeURIComponent(task)+"/stop","POST",{});badge("stopped");$("stop").disabled=true;runSerial++;await approvals();}catch(e){badge(e.message);}};
-$("mode").onchange=()=>{if(ctl("mode")==="demo"){$("target").value="127.0.0.1";$("scope").value="127.0.0.1/32";}};
+$("mode").onchange=()=>{if(["demo","local"].includes(ctl("mode"))){$("target").value="127.0.0.1";$("scope").value="127.0.0.1/32";}};
 </script></body></html>
