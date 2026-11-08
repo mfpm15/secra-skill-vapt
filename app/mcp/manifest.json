@@ -99,6 +99,32 @@
       }
     },
     {
+      "name": "local.http_head",
+      "description": "Real HTTP HEAD to literal 127.0.0.1 only, no DNS or redirect; explicitly authorized local mode.",
+      "risk": "R2",
+      "adapter": "loopback_head",
+      "mode": "local",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "port": {
+            "type": "integer",
+            "minimum": 1024,
+            "maximum": 65535
+          }
+        },
+        "required": [
+          "task_id",
+          "port"
+        ]
+      }
+    },
+    {
       "name": "nmap.tcp_top20",
       "description": "Real reviewed Nmap TCP top20 through fail-closed gateway and scope enforcement.",
       "risk": "R2",
