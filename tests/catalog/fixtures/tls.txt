@@ -1,0 +1,5 @@
+[SINTETIS]
+Supported protocols: TLSv1.2 TLSv1.3
+Certificate CN: customer.private.invalid
+Subject: email owner@private.invalid
+Private configuration marker: CANARY

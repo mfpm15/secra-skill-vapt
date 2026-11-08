@@ -1,0 +1,4 @@
+[SINTETIS]
+user=admin password=SuperSecretLongValue
+Authentication success for admin@private.invalid
+Bearer TopSecretTokenDoNotForward
