@@ -13,7 +13,7 @@ import subprocess
 import sys
 from uuid import UUID
 
-from .security import redact
+from .security import redact, BEARER, IPV4, EMAIL, JWT, SECRET
 
 SCRIPT = Path(__file__).resolve().parents[1] / "vendor" / "sapper_v2" / "sapper.py"
 GOAL = "Document an authorized, bounded VAPT assessment with verified observations and a final report."
@@ -38,7 +38,7 @@ def graph_store(eid: str, data_dir: Path) -> Path:
 
 
 def _call(store: Path, *arguments: str) -> str:
-    allowed = {"init", "fact", "intent", "graph", "validate"}
+    allowed = {"init", "fact", "intent", "graph", "validate", "frontier"}
     if not arguments or arguments[0] not in allowed:
         raise GraphError("Sapper operation not permitted")
     if not SCRIPT.is_file():
@@ -120,6 +120,8 @@ def stage_end(eid: str, data_dir: Path, title: str, intent_id: str, observation:
         raise GraphError("Unrecognized stage title or intent id")
     if not re.fullmatch(r"[A-Za-z0-9 ,.:;()/-]{1,200}", observation):
         raise GraphError("Observation must be schema-controlled plain text")
+    if any(rule.search(observation) for rule in (BEARER, IPV4, EMAIL, JWT, SECRET)):
+        raise GraphError("Potentially sensitive fact text rejected")
     store = graph_store(eid, data_dir)
     return _node_id(_call(
         store, "fact", observation, "--from-intent", intent_id,
@@ -152,3 +154,22 @@ def public_graph(eid: str, data_dir: Path) -> dict:
     intents = [clean_intent(n) for n in source.get("intents", [])[:100] if isinstance(n, dict)]
     return {"engine": "N1nEmAn/sapper-v2 pinned CLI", "enabled": bool(facts),
             "facts": facts, "intents": intents, "total_facts": len(facts), "total_intents": len(intents)}
+
+def resolve_frontier(eid: str, data_dir: Path) -> dict:
+    """Invoke upstream dependency resolver in a read-only subprocess.
+
+    The API returns only verified intent IDs and the integrity verdict,
+    never raw descriptions or paths from graph files.
+    """
+    store = graph_store(eid, data_dir)
+    if not (store / "project.json").is_file():
+        return {"ready_ids": [], "integrity": "uninitialized"}
+    raw = _call(store, "frontier")
+    ids = []
+    for line in raw.splitlines():
+        candidate = line.split("\t", 1)[0]
+        if re.fullmatch(r"i\d{3,}", candidate):
+            ids.append(candidate)
+    verdict = _call(store, "validate")
+    return {"ready_ids": ids[:100],
+            "integrity": "valid" if verdict.startswith("graph valid:") else "unknown"}
