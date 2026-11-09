@@ -171,3 +171,25 @@ def test_failed_archive_staging_is_cleaned_without_publishing(tmp_path, monkeypa
     assert not target.exists()
     assert not list(tmp_path.glob(".secra-archive-stage-*"))
     assert manager.require(tid).exists()
+
+
+def test_task_lifecycle_automatically_records_testing_phase_utc(tmp_path):
+    store, manager, tid = fixture(tmp_path)
+    assert [x["stage"] for x in manager.phases(tid)] == ["intake", "preflight"]
+    store.start(tid)
+    assert manager.phases(tid)[-1]["stage"] == "testing"
+    assert manager.phases(tid)[-1]["event"] == "started"
+    store.set_status(tid, "completed", "Synthetic task concluded.")
+    latest = manager.phases(tid)[-1]
+    assert latest["stage"] == "testing"
+    assert latest["event"] == "completed"
+    assert latest["at_utc"].endswith("+00:00")
+
+
+def test_stopped_task_records_blocked_phase_and_retains_workspace(tmp_path):
+    store, manager, tid = fixture(tmp_path)
+    store.start(tid)
+    store.stop(tid)
+    assert manager.phases(tid)[-1]["event"] == "blocked"
+    assert store.require(tid)["status"] == "stopped"
+    assert manager.require(tid).exists()
