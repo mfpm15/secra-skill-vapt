@@ -83,12 +83,19 @@ class TaskStore:
 
     def create(self, target: str, scope: str, *, mode: str = "demo",
                model: str = "", authorized: bool = False) -> str:
-        if not authorized or mode not in {"demo", "live", "local"}:
+        if not authorized or mode not in {"demo", "live", "local", "evidence"}:
             raise TaskError("WRITTEN_AUTHORIZATION_REQUIRED")
         if not isinstance(target, str) or not isinstance(scope, str):
             raise TaskError("TARGET_SCOPE_INVALID")
         try:
-            if mode in {"demo", "local"} and target == "127.0.0.1" and scope == "127.0.0.1/32":
+            if mode == "evidence":
+                # Explicitly offline-only. Store no IP, CIDR, hostname or
+                # synthetic target. All target-facing manifest tools are
+                # denied by task-mode checks independently in MCP.
+                if target != "" or scope != "":
+                    raise TaskError("EVIDENCE_MODE_MUST_NOT_SET_NETWORK_SCOPE")
+                checked = ""
+            elif mode in {"demo", "local"} and target == "127.0.0.1" and scope == "127.0.0.1/32":
                 checked = target
             elif mode == "local":
                 raise TaskError("LOCAL_ONLY_127_0_0_1")
@@ -110,7 +117,9 @@ class TaskStore:
         with self._db() as db:
             db.execute("INSERT INTO tasks (id,target,scope,mode,model,authorized,status) VALUES (?,?,?,?,?,?,?)",
                        (tid, checked, scope, mode, model, 1, "created"))
-        self.append(tid, "task", "", "created", "Engagement initialized; target is ASSET_001.")
+        self.append(tid, "task", "", "created",
+                    "Offline evidence task initialized; no network target."
+                    if mode == "evidence" else "Engagement initialized; target is ASSET_001.")
         return tid
 
     def require(self, tid: str) -> dict:

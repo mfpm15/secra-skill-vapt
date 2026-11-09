@@ -60,6 +60,8 @@ class AgentLoop:
     def run(self, task_id: str, *, model=None, specialist: str = "recon",
             stop: threading.Event | None = None) -> LoopResult:
         task = self.store.require(task_id)
+        if task["mode"] == "evidence":
+            raise TaskError("EVIDENCE_MODE_AGENT_LOOP_DISABLED")
         if task["status"] == "created":
             self.store.start(task_id)
             task = self.store.require(task_id)

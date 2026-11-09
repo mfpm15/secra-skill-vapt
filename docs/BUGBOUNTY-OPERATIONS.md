@@ -89,6 +89,23 @@ python3 "$REPO/scripts/secra_live_preflight.py" \
 
 This static preflight never performs scans, uses sudo or proves network isolation. It checks systemd backend selection, root-controlled fence metadata, wrapper ownership and pinned binary digests. It intentionally exits with status 2 to indicate that privileged Kali kernel/BPF isolation is **not** independently attested. Run the existing Kali fence lab suite with authorized, disposable network namespaces before relying on live tooling.
 
+## Domain-only bounty: offline evidence task WITHOUT fake IP target
+
+Many programs approve DNS hostnames rather than literal IPs. The live SECRA gateway still only supports single IPv4 targets, so do **not** invent an IP address or set a pretend CIDR to use the live scanner.
+
+Instead, create an explicitly offline evidence task. It stores empty network target/scope, cannot dispatch either live or demo scanners, and is for operator-captured evidence and process tracking only.
+
+~~~bash
+REPO="$HOME/.local/share/secra/repo"
+
+python3 "$REPO/scripts/secra_evidence_task.py" \
+  --confirm-authorization
+
+# Note the printed task_id, then use it for the authorized HAR import below.
+~~~
+
+The operator must read the current program brief first. The later HAR importer requires the exact approved hostname(s), and only retains entries matching those names. This task does not create any DNS authorization, alter a bug bounty program's scope, or permit automated requests. You can still use OpenCode for knowledge, hypothesis planning, case handoff and reporting, without exposing a fictional IP to the model.
+
 ## 5. Real HTTP evidence import (operator-captured HAR, no simulator)
 
 When the live kernel fence is not yet attested, you can still work with **real** traffic captured *manually* from an explicitly authorized application in your local browser or HTTP proxy. Export a HAR file to your Kali machine. Treat HAR as sensitive: it can contain cookies, bearer tokens, request bodies and personal data.
