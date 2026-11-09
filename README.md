@@ -38,6 +38,12 @@ The agent loop is bounded to **25 tool steps and 20 minutes**; a stopped, refuse
 
 For regression testing install `requirements-dev.txt` and run `python -m pytest tests/e2e -q -ra` and `python -m pytest -m "not lab" -q`. Privileged `tests/fence/ -m lab` requires an independently provisioned Kali VM; no lab proofs have been provided.
 
+## Hostname-based programs: evidence-only engagement (v0.6 preview)
+
+For bug bounty programs specifying authorized DNS names but no approved literal IPv4 scope, use `scripts/secra_evidence_task.py --confirm-authorization` to create a new **offline evidence-only task without a fake IP or CIDR**. This task can receive operator-filtered HAR observations, maintain reviewed hypotheses and preserve case evidence, but its mode prevents all scanner and loopback MCP tools from running. The automated AgentLoop is disabled in this mode; the user controls offline imports and reviews.
+
+This is not a substitute for a separately reviewed DNS/hostname scope engine or per-program rate limiting. See [docs/BUGBOUNTY-OPERATIONS.md](docs/BUGBOUNTY-OPERATIONS.md).
+
 ## Operator-captured real HAR observations (v0.6 preview)
 
 New `scripts/secra_har_import.py` accepts owner-only HAR exports from an operator-authorized browser/proxy, requires an explicit exact-host allowlist and manual scope affirmation, **discards unrelated host entries**, and seals selected real request/response records in SECRA's local AES-GCM vault. The CLI returns only aggregate status/header/cookie-attribute observations and an opaque evidence reference; it makes **zero network requests** and does not call a model. Imported captures can support local operator verification through the lead registry but are not self-proving vulnerabilities. Wildcard hostnames are rejected. See [docs/BUGBOUNTY-OPERATIONS.md](docs/BUGBOUNTY-OPERATIONS.md).
