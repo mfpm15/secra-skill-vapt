@@ -125,6 +125,12 @@ class LeadRegistry:
                 (task["id"],)).fetchone()[0]
             if total >= MAX_TOTAL_LEADS:
                 raise LeadError("LEAD_TOTAL_LIMIT")
+            duplicate = db.execute(
+                "SELECT 1 FROM process_leads WHERE task_id=? "
+                "AND lower(title)=lower(?) AND status!='closed' LIMIT 1",
+                (task["id"], clean_title)).fetchone()
+            if duplicate:
+                raise LeadError("LEAD_DUPLICATE_OR_PREVIOUSLY_NEGATIVE")
             if active >= MAX_ACTIVE_LEADS:
                 raise LeadError("LEAD_ACTIVE_LIMIT")
             db.execute(
