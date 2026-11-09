@@ -38,6 +38,7 @@ REASONS = frozenset({
 })
 TITLE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 .():_-]{4,119}$")
 REF = re.compile(r"^evidence://([a-f0-9-]{36})/([a-f0-9-]{36})$")
+OBSERVATION_TOOLS = frozenset({"local.http_head", "nmap.tcp_top20", "curl.http_head"})
 
 
 class LeadError(ValueError):
@@ -85,7 +86,7 @@ class LeadRegistry:
             row = db.execute(
                 "SELECT 1 FROM tool_runs WHERE task_id=? AND output_ref=? "
                 "AND status='completed' AND finished_at IS NOT NULL "
-                "AND tool != 'workflow.handoff' LIMIT 1",
+                "AND tool IN ('local.http_head','nmap.tcp_top20','curl.http_head') LIMIT 1",
                 (task_id, reference)).fetchone()
         if row is None:
             raise LeadError("LEAD_EVIDENCE_NOT_A_COMPLETED_TOOL_RECEIPT")
