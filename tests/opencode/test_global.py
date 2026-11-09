@@ -35,6 +35,8 @@ def test_all_v2_native_agent_profiles_exist():
             assert "  - action: execute" not in content
         if name == "secra-ctf":
             assert '  - action: shell\n    resource: "*"\n    effect: ask' in content
+            assert '  - action: secra_artifact_*\n    resource: "*"\n    effect: ask' in content
+            assert '  - action: secra_workflow_capabilities\n    resource: "*"\n    effect: allow' in content
 
 
 def test_global_install_from_arbitrary_directory(tmp_path):
