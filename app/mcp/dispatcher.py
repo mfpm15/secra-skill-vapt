@@ -106,6 +106,16 @@ class ToolDispatcher:
         if cancelled.is_set():
             return receipt("cancelled", None, "Operator stopped the task.")
         try:
+            if tool.adapter == "lead_proposal":
+                from app.loop.leads import LeadRegistry
+                lead = LeadRegistry(self.store).create(
+                    tid, args["category"], args["title"])
+                # A proposal is metadata only, NOT a vulnerability or evidence.
+                safe_summary = ("Unverified hypothesis " + lead["id"] +
+                                " registered (" + lead["category"] + ").")
+                result = receipt("completed", 0, safe_summary)
+                self.store.append(tid, "tool", name, "done", result["summary"])
+                return result
             if is_handoff:
                 from app.loop.continuity import build_handoff, short_handoff
                 snapshot = build_handoff(self.store, tid)

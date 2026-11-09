@@ -240,6 +240,47 @@
           "task_id"
         ]
       }
+    },
+    {
+      "name": "workflow.lead_propose",
+      "description": "Record a sanitized unverified process hypothesis for an authorized running task. Does not execute tests or verify findings.",
+      "risk": "R0",
+      "adapter": "lead_proposal",
+      "mode": "both",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "web",
+              "api",
+              "auth",
+              "network",
+              "tls",
+              "code",
+              "mobile",
+              "other"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 120,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9 .():_-]{4,119}$"
+          }
+        },
+        "required": [
+          "task_id",
+          "category",
+          "title"
+        ]
+      }
     }
   ]
 }

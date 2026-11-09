@@ -110,7 +110,7 @@ negative <--               rejected
   +--> testing (only with reason "reopened")
 ~~~
 
-`verified` is a **local operator sign-off status**; it requires two *distinct*, completed, non-simulated, approved observation receipts from the same task, with valid AES-GCM seals. This does not replace an independent human verifier or automatically prove exploitability. `demo` tasks can never produce operator-verified findings. The model cannot promote a lead directly: no lead-writing MCP tool is exposed. Invalid states, missing seals, cross-engagement references, stale version updates, or simulated receipts are denied.
+`verified` is a **local operator sign-off status**; it requires two *distinct*, completed, non-simulated, approved observation receipts from the same task, with valid AES-GCM seals. This does not replace an independent human verifier or automatically prove exploitability. `demo` tasks can never produce operator-verified findings. The model can only propose an unverified lead via the R0 `workflow.lead_propose` MCP tool. The backend limits each engagement to five active and 150 total leads. No model tool can perform status transitions, verification or operator sign-off. Invalid states, missing seals, cross-engagement references, stale version updates, or simulated receipts are denied.
 
 The local operator UI has a **Hypothesis & verification board** to create, inspect and transition leads. All REST endpoints require the existing local operator token:
 
