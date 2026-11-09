@@ -51,9 +51,9 @@ Initialization is idempotent and preserves existing operator notes. It never cre
 3. An offline preflight records which binaries are on PATH but **does not execute them**. Route and VPN readiness remain explicitly unverified until locally checked.
 4. Agent loads reviewed knowledge on demand. Every schema-valid MCP invocation is durably audited **before** dispatch with real UTC timestamps, outcome, elapsed milliseconds and sealed evidence references.
 5. Operator or coordinating agent records explicit phase transitions; unrecorded phase times remain unknown, not backfilled from file mtimes.
-6. At a model switch, stage transition or session end, invoke read-only `workflow.handoff`. It creates an AES-GCM sealed checkpoint; the model gets only an abbreviated receipt.
+6. When the task starts/stops/completes, SECRA also automatically records testing-phase UTC events. At a model switch, stage transition or session end, invoke read-only `workflow.handoff`. It creates an AES-GCM sealed checkpoint; the model gets only an abbreviated receipt.
 7. Review suspected findings independently and maintain negative hypotheses, cleanup evidence and follow-up register as **operator-reviewed notes**. The checkpoint never invents these.
-8. Generate a SHA-256 manifest before reporting/archiving; verify it after any changes. Archive uses a checked copy and leaves the original intact.
+8. Generate a SHA-256 manifest before reporting/archiving; verify it after any changes. Archive stages the copy in the destination parent, verifies hashes, then publishes it; failure leaves no finalized partial archive and never deletes the source.
 
 ## Using the CLI without changing OpenCode working directory
 
@@ -109,7 +109,7 @@ Not yet measured: independent verified finding count, TTFV, handoff fidelity, re
 - This first increment captures **offline** tool presence only; a verified Kali VPN route and privileged egress attestation must be provided separately before live assessment.
 - Phase transitions are explicit and local; no vulnerable hypothesis is automatically confirmed, no notes are promoted as trusted knowledge, and cleanup is never executed without operator approval.
 - Metadata-only checkpoints cannot reconstruct complete chains unless analysts separately preserve verified facts, negative leads and cleanup proofs.
-- The archive command verifies SHA-256 and retains the source; any unexpected source drift causes refusal. Review path permissions on the destination filesystem.
+- The archive command verifies SHA-256, stages before publish, and retains the source; any unexpected source drift causes refusal. Review path permissions on the destination filesystem.
 
 ## Suggested evaluations
 
