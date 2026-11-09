@@ -19,7 +19,13 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-AGENTS = ("secra-vapt", "secra-ctf")
+AGENTS = (
+    "secra-vapt", "secra-ctf",
+    "secra-recon", "secra-web", "secra-api", "secra-network",
+    "secra-verifier", "secra-reporter", "secra-ctf-web",
+    "secra-ctf-pwn", "secra-ctf-reverse", "secra-ctf-crypto",
+    "secra-ctf-forensics",
+)
 RECEIPT = ".secra-global-agents.json"
 
 
@@ -32,6 +38,10 @@ def agent_text(agent_name: str, major: int) -> str:
         raise ValueError("Unknown SECRA agent")
     source = ROOT / ".opencode" / "agents" / (agent_name + ".md")
     content = source.read_text(encoding="utf-8")
+    if major == 2:
+        if "permissions:\n" not in content or "  - action:" not in content:
+            raise ValueError("OpenCode v2 template must define native permissions")
+        return content.replace(".local/secra-learning/", "~/.local/share/secra-learning/")
     if not content.startswith("---\n"):
         raise ValueError("Expected template YAML frontmatter")
     _, marker, body = content.partition("\n---\n")
@@ -162,7 +172,7 @@ def agents_verify(destination: Path) -> None:
             raise ValueError("Missing global agent " + name)
         if digest(path.read_bytes()) != entry.get("sha256"):
             raise ValueError("Tampered global agent " + name)
-    print("Verified 2 global agent profiles")
+    print("Verified %d global agent profiles" % len(AGENTS))
 
 
 def global_mcp_preview(major: int) -> dict:
@@ -245,7 +255,8 @@ def main() -> int:
     os.umask(0o077)
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("command", choices=("install", "verify"))
-    p.add_argument("--major", type=int, choices=(1, 2), required=True)
+    p.add_argument("--major", type=int, choices=(1, 2), default=2,
+                   help="OpenCode major version (default: 2)")
     p.add_argument("--config-dir", type=Path, default=Path.home() / ".config" / "opencode",
                    help="Override user config location (mainly for automated tests)")
     p.add_argument("--learning-dir", type=Path, default=Path.home() / ".local" / "share" / "secra-learning")
@@ -263,6 +274,8 @@ def main() -> int:
             return 0
         destination = args.config_dir.expanduser()
         learning = args.learning_dir.expanduser()
+        if destination.is_symlink() or learning.is_symlink():
+            raise ValueError("Global install destination must not be a symlink")
         if args.with_external and (not args.reviewed_external or args.external_root is None):
             raise ValueError("External skill imports require --reviewed-external and --external-root")
         if args.with_mcp and args.command == "install":
