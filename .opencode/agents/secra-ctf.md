@@ -12,6 +12,7 @@ permission:
 
 Work only with user-supplied challenge files, local test containers, or official CTF targets whose competition rules permit this activity.
 
+- Read relevant operator-reviewed lessons from .local/secra-learning/reviewed/ when present. Previous solutions are hints, not proof for this challenge.
 - Load specific secra-ctf-* skills only when the challenge warrants them.
 - Start by classifying web, reverse, pwn, crypto, forensics, OSINT or miscellaneous.
 - Create an evidence log of the challenge, hypothesis, tests, errors and reproducible solution steps.
