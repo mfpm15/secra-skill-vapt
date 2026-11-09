@@ -330,20 +330,32 @@ class WorkspaceManager:
         if dry_run:
             return {"status": "dry-run", "source_retained": True,
                     "files": verification["actual_files"], "destination": str(dest)}
-        # Symlinks were rejected by verify_manifest before copying.
-        shutil.copytree(source, dest, symlinks=True)
-        for path in dest.rglob("*"):
-            if path.is_symlink():
-                raise WorkspaceError("WORKSPACE_ARCHIVE_SYMLINK")
-            os.chmod(path, 0o700 if path.is_dir() else 0o600)
-        os.chmod(dest, 0o700)
-        # The destination name may be a user-selected archive name, not a UUID.
-        expected = {x["path"]: (x["sha256"], x["size"]) for x in self.files(tid)}
-        copied = {}
-        for path in dest.rglob("*"):
-            if path.is_file() and path.relative_to(dest).as_posix() != MANIFEST:
-                copied[path.relative_to(dest).as_posix()] = (_hash_file(path), path.stat().st_size)
-        if copied != expected:
-            raise WorkspaceError("WORKSPACE_ARCHIVE_VERIFY_FAILED_SOURCE_RETAINED")
-        return {"status": "verified-copy", "source_retained": True,
-                "files": len(copied), "destination": str(dest)}
+        # Stage in the destination parent, verify the staging copy, and
+        # publish only after all checks pass. Any failure leaves the source
+        # untouched and does not create a partially finalized archive.
+        staging = Path(tempfile.mkdtemp(prefix=".secra-archive-stage-", dir=dest.parent))
+        try:
+            # Preserve any unexpected symlink rather than dereferencing it;
+            # the verification below will reject it before publication.
+            shutil.copytree(source, staging, symlinks=True, dirs_exist_ok=True)
+            copied = {}
+            for path in staging.rglob("*"):
+                if path.is_symlink():
+                    raise WorkspaceError("WORKSPACE_ARCHIVE_SYMLINK")
+                os.chmod(path, 0o700 if path.is_dir() else 0o600)
+                if path.is_file() and path.relative_to(staging).as_posix() != MANIFEST:
+                    copied[path.relative_to(staging).as_posix()] = (
+                        _hash_file(path), path.stat().st_size)
+            os.chmod(staging, 0o700)
+            expected = {x["path"]: (x["sha256"], x["size"])
+                        for x in self.files(tid)}
+            if copied != expected:
+                raise WorkspaceError("WORKSPACE_ARCHIVE_VERIFY_FAILED_SOURCE_RETAINED")
+            if dest.exists() or dest.is_symlink():
+                raise WorkspaceError("WORKSPACE_ARCHIVE_EXISTS")
+            staging.rename(dest)
+            return {"status": "verified-copy", "source_retained": True,
+                    "files": len(copied), "destination": str(dest)}
+        finally:
+            if staging.exists():
+                shutil.rmtree(staging)
