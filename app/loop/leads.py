@@ -39,6 +39,9 @@ REASONS = frozenset({
     "retest_needed", "reopened", "remediated", "not_applicable"
 })
 TITLE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 .():_-]{4,119}$")
+ACTIVE_STATES = ("open", "testing", "review_requested")
+MAX_ACTIVE_LEADS = 5
+MAX_TOTAL_LEADS = 150
 REF = re.compile(r"^evidence://([a-f0-9-]{36})/([a-f0-9-]{36})$")
 OBSERVATION_TOOLS = frozenset({"local.http_head", "nmap.tcp_top20", "curl.http_head"})
 
@@ -112,6 +115,18 @@ class LeadRegistry:
         lead_id = str(uuid.uuid4())
         now = self.store.utc_now()
         with self.store._db() as db:
+            db.execute("BEGIN IMMEDIATE")
+            total = db.execute(
+                "SELECT COUNT(*) FROM process_leads WHERE task_id=?",
+                (task["id"],)).fetchone()[0]
+            active = db.execute(
+                "SELECT COUNT(*) FROM process_leads WHERE task_id=? "
+                "AND status IN ('open','testing','review_requested')",
+                (task["id"],)).fetchone()[0]
+            if total >= MAX_TOTAL_LEADS:
+                raise LeadError("LEAD_TOTAL_LIMIT")
+            if active >= MAX_ACTIVE_LEADS:
+                raise LeadError("LEAD_ACTIVE_LIMIT")
             db.execute(
                 "INSERT INTO process_leads(id,task_id,category,title,status,version,"
                 "primary_ref,created_at,updated_at) VALUES(?,?,?,?,'open',1,?,?,?)",
@@ -194,6 +209,14 @@ class LeadRegistry:
         now = self.store.utc_now()
         # Compare-and-swap prevents two agents or operator tabs overwriting progress.
         with self.store._db() as db:
+            db.execute("BEGIN IMMEDIATE")
+            if next_status in ACTIVE_STATES and current["status"] not in ACTIVE_STATES:
+                active = db.execute(
+                    "SELECT COUNT(*) FROM process_leads WHERE task_id=? "
+                    "AND status IN ('open','testing','review_requested')",
+                    (task["id"],)).fetchone()[0]
+                if active >= MAX_ACTIVE_LEADS:
+                    raise LeadError("LEAD_ACTIVE_LIMIT")
             updated = db.execute(
                 "UPDATE process_leads SET status=?,version=version+1,"
                 "primary_ref=?,review_ref=?,reason=?,updated_at=? "
