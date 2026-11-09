@@ -7,6 +7,7 @@ scope and the existing typed ToolGateway. The model never receives real IPs.
 from __future__ import annotations
 
 import threading
+import re
 import time
 from collections import Counter
 from dataclasses import dataclass, field
@@ -70,11 +71,37 @@ class AgentLoop:
             NineRouterPlanner(task["model"]))
         stopper = stop or threading.Event()
         started = time.monotonic()
-        seen = Counter()
-        step_count = 0
+        # Recover bounded task progress from the committed audit log after a
+        # process/model switch. No raw outputs, targets or prompts are restored.
+        historical = self.store.tool_runs(task_id, limit=200)
+        process_tools = {"workflow.handoff", "workflow.capabilities",
+                         "workflow.lead_propose"}
+        prior_runs = [r for r in historical if r["tool"] not in process_tools]
+        unresolved = [r for r in prior_runs if r["finished_at"] is None]
+        seen = Counter(r["tool"] for r in prior_runs)
+        historical_steps = len(prior_runs)
+        step_count = 0  # Per invocation, not retroactively attributed to this model.
         receipts = []
         prior = None
         observations: list[dict] = []
+        if prior_runs and prior_runs[-1]["status"] in {"completed", "simulated"}:
+            last_tool = prior_runs[-1]["tool"]
+            # Event summaries are already masked by TaskStore.append. Accept
+            # only the provider's strict public-summary alphabet.
+            with self.store._db() as db:
+                event = db.execute(
+                    "SELECT summary FROM events WHERE task_id=? AND kind='tool' "
+                    "AND tool=? AND status='done' ORDER BY seq DESC LIMIT 1",
+                    (task_id, last_tool)).fetchone()
+            if event:
+                clean = event["summary"][:240]
+                if clean and re.fullmatch(r"[A-Za-z0-9 .,;:_-]+", clean):
+                    prior = (last_tool, clean)
+            if any(r["tool"] == "demo.nmap_scan" and r["status"] == "simulated"
+                   for r in prior_runs):
+                # Fixed synthetic test fixture, not inferred live services.
+                observations = [{"port": 80, "service": "http"},
+                                {"port": 443, "service": "https"}]
 
         def finish(status: str, message: str) -> LoopResult:
             if self.store.is_stopped(task_id):
@@ -82,7 +109,12 @@ class AgentLoop:
             self.store.set_status(task_id, status, message)
             return LoopResult(task_id, status, step_count, receipts)
 
-        for index in range(self.max_steps):
+        if unresolved or len(historical) >= 200:
+            return finish("failed", "Unfinished or truncated historical tool audit; operator review required.")
+        if historical_steps >= self.max_steps:
+            return finish("exhausted", "Total audited tool budget already exhausted across sessions.")
+
+        for index in range(self.max_steps - historical_steps):
             if stopper.is_set() or self.store.is_stopped(task_id):
                 self.store.stop(task_id)
                 return LoopResult(task_id, "stopped", step_count, receipts)
