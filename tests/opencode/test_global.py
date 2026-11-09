@@ -21,7 +21,7 @@ def invoke(*args):
 
 
 def test_all_v2_native_agent_profiles_exist():
-    assert len(opencode_global.AGENTS) == 27
+    assert len(opencode_global.AGENTS) == 28
     for name in opencode_global.AGENTS:
         content = opencode_global.agent_text(name, 2)
         assert content.startswith("---\n")
@@ -44,7 +44,7 @@ def test_global_install_from_arbitrary_directory(tmp_path):
     learning = tmp_path / "learning"
     result = invoke("install", "--major", "2", "--config-dir", config, "--learning-dir", learning)
     assert result.returncode == 0, result.stderr
-    assert len(list((config / "agents").glob("*.md"))) == 27
+    assert len(list((config / "agents").glob("*.md"))) == 28
     assert len(list((config / "skills").glob("*/SKILL.md"))) == 35
     assert (learning / "inbox").is_dir()
     assert (learning / "reviewed").is_dir()
