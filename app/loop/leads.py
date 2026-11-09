@@ -91,7 +91,7 @@ class LeadRegistry:
             row = db.execute(
                 "SELECT 1 FROM tool_runs WHERE task_id=? AND output_ref=? "
                 "AND status='completed' AND finished_at IS NOT NULL "
-                "AND tool IN ('local.http_head','nmap.tcp_top20','curl.http_head') LIMIT 1",
+                "AND tool IN ('local.http_head','nmap.tcp_top20','curl.http_head','operator.har_import') LIMIT 1",
                 (task_id, reference)).fetchone()
         if row is None:
             raise LeadError("LEAD_EVIDENCE_NOT_A_COMPLETED_TOOL_RECEIPT")
