@@ -20,6 +20,11 @@ SOURCES = {
     "ctf-skills": "https://github.com/ljagiello/ctf-skills.git",
     "trailofbits-skills": "https://github.com/trailofbits/skills.git",
     "secskills": "https://github.com/trilwu/secskills.git",
+    "cloudflare-security": "https://github.com/cloudflare/security-audit-skill.git",
+    "anthropic-cyber": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills.git",
+    "reverse-skill": "https://github.com/zhaoxuya520/reverse-skill.git",
+    "superpowers": "https://github.com/obra/superpowers.git",
+    "planning-with-files": "https://github.com/OthmanAdi/planning-with-files.git",
 }
 SHA = re.compile(r"^[0-9a-f]{40}$")
 
