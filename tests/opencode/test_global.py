@@ -100,3 +100,13 @@ def test_global_v2_launch_plan_has_no_fixed_scope():
     assert "approved IP/CIDR" in agent
     assert "do not have a predefined target" in agent
     assert "kernel egress attestation" in agent
+
+def test_offline_toolcheck_does_not_execute_security_tools():
+    from scripts import opencode_toolcheck
+    report = opencode_toolcheck.report()
+    assert isinstance(report["groups"], dict)
+    assert "recon" in report["groups"]
+    assert "available" in report["groups"]["recon"]
+    assert "missing" in report["groups"]["recon"]
+    assert len(report["manifest"]) >= 5
+    assert "not execution authorization" in report["disclaimer"]
