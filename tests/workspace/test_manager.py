@@ -151,3 +151,23 @@ def test_workspace_cli_runs_from_other_directory(tmp_path):
         cwd="/tmp", capture_output=True, text=True)
     assert check.returncode == 0, check.stderr
     assert json.loads(check.stdout)["status"] == "verified"
+
+
+def test_failed_archive_staging_is_cleaned_without_publishing(tmp_path, monkeypatch):
+    from app import workspace as module
+    _, manager, tid = fixture(tmp_path)
+    manager.write_manifest(tid)
+    target = tmp_path / "archive-should-not-exist"
+    real_hash = module._hash_file
+
+    def corrupt_on_copy(path):
+        if ".secra-archive-stage-" in str(path):
+            raise WorkspaceError("SIMULATED_COPY_FAILURE")
+        return real_hash(path)
+
+    monkeypatch.setattr(module, "_hash_file", corrupt_on_copy)
+    with pytest.raises(WorkspaceError, match="SIMULATED_COPY_FAILURE"):
+        manager.archive(tid, target, dry_run=False)
+    assert not target.exists()
+    assert not list(tmp_path.glob(".secra-archive-stage-*"))
+    assert manager.require(tid).exists()
