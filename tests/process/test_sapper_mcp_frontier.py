@@ -19,7 +19,10 @@ def test_sapper_frontier_metadata_only_before_and_after_initialized_graph(tmp_pa
     assert empty["status"] == "completed"
     assert empty["masked"] is True
     assert "not initialized" in empty["summary"]
-    anchor = initialize_graph(tid, tmp_path)
+    created = dispatcher.call("workflow.graph_initialize", {"task_id": tid})
+    assert created["status"] == "completed"
+    assert "No target" not in created["summary"]
+    anchor = initialize_graph(tid, tmp_path)  # Idempotent on the same real graph
     intent = stage_begin(tid, tmp_path, "Review Web", anchor)
     active = dispatcher.call("workflow.graph_frontier", {"task_id": tid})
     assert active["status"] == "completed"
@@ -32,7 +35,7 @@ def test_sapper_frontier_metadata_only_before_and_after_initialized_graph(tmp_pa
     assert completed["status"] == "completed"
     assert "eligible intent IDs: none" in completed["summary"]
     assert "arena" not in completed["summary"].lower()
-    assert len(store.tool_runs(tid)) == 3
+    assert len(store.tool_runs(tid)) == 4
 
 
 def test_frontier_is_still_read_only_after_case_completed(tmp_path):
@@ -43,6 +46,8 @@ def test_frontier_is_still_read_only_after_case_completed(tmp_path):
     denied = dispatcher.call("workflow.graph_frontier",
                              {"task_id": tid, "argv": ["sapper", "dispatch"]})
     assert denied["status"] == "denied"
+    no_new_graph = dispatcher.call("workflow.graph_initialize", {"task_id": tid})
+    assert no_new_graph["status"] == "denied"
 
 
 def test_sapper_read_only_tool_is_classified_as_nonexecuting(tmp_path):
