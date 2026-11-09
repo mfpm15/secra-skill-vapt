@@ -114,6 +114,8 @@ def _job(tid: str, stopper: threading.Event):
 def start_task(tid: str):
     try:
         task = STORE.require(tid)
+        if task["mode"] == "evidence":
+            raise TaskError("EVIDENCE_MODE_NO_AUTOMATED_AGENT_LOOP")
         if task["status"] != "created":
             raise TaskError("TASK_NOT_STARTABLE")
         with LOCK:
