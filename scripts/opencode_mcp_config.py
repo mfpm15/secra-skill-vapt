@@ -24,6 +24,9 @@ def build_config(major: int) -> dict:
             "mcp": {"servers": {"secra": {
                 "type": "local", "command": command,
                 "cwd": str(ROOT), "disabled": False,
+                # OpenCode V2 defaults to Code Mode; explicit direct MCP tools
+                # respect secra_* permissions without granting execute access.
+                "codemode": False,
             }}},
         }
     raise ValueError("Unsupported OpenCode major version")
