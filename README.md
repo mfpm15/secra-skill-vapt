@@ -38,6 +38,16 @@ The agent loop is bounded to **25 tool steps and 20 minutes**; a stopped, refuse
 
 For regression testing install `requirements-dev.txt` and run `python -m pytest tests/e2e -q -ra` and `python -m pytest -m "not lab" -q`. Privileged `tests/fence/ -m lab` requires an independently provisioned Kali VM; no lab proofs have been provided.
 
+## Complete offline agent smoke (v0.5 preview)
+
+Run a temporary, network-free synthetic workflow from any directory:
+
+~~~bash
+python3 /absolute/path/to/secra/scripts/secra_smoke.py
+~~~
+
+It exercises operator-style task creation, capability preflight, unverified lead proposal, the bounded FakeDemoModel→reviewed demo MCP adapters→vault loop, handoff, workspace manifest, and multi-source case-integrity check. It reports simulation-only results and never tests real external model correctness or Kali network execution. The backend also enforces SQLite-atomic call ceilings across model/MCP sessions to avoid unlimited retry loops.
+
 ## Reliability and evidence-integrity preflight (v0.5 preview)
 
 New read-only MCP `workflow.capabilities` tells the agent which reviewed tools match the current task mode and status, distinguishing offline fixtures, loopback-only, proposals, approval-only, blocked and live-gated capabilities. It never connects to a target or claims fence attestation. OpenCode `secra-vapt` requests this before choosing a tool.
