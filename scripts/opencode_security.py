@@ -128,7 +128,8 @@ def build_skill(source: Path, skill_id: str, description: str, origin: str,
             count += 1
             if count > MAX_REFERENCES:
                 raise ValueError("Too many supporting files for " + skill_id)
-    origin_data = {"id": skill_id, "source": origin, "skill_sha256": sha256(payload)}
+    origin_data = {"id": skill_id, "source": origin, "skill_sha256": sha256(payload),
+                   "file_sha256": {name: sha256(data) for name, data in sorted(files.items())}}
     files[".secra-origin.json"] = (json.dumps(origin_data, indent=2) + "\n").encode()
     return files
 
@@ -173,7 +174,9 @@ def install_one(destination: Path, skill_id: str, files: dict[str, bytes],
         previous = json.loads(marker.read_text(encoding="utf-8"))
         if previous.get("id") != skill_id:
             return "SKIP different owner: " + skill_id
-        if previous.get("skill_sha256") == sha256(files["SKILL.md"]):
+        incoming = json.loads(files[".secra-origin.json"].decode("utf-8"))
+        if (previous.get("skill_sha256") == incoming["skill_sha256"]
+                and previous.get("file_sha256") == incoming["file_sha256"]):
             return "UNCHANGED: " + skill_id
         if not replace:
             return "SKIP changed (use --replace): " + skill_id
@@ -216,6 +219,15 @@ def verify(destination: Path) -> int:
         file = root / "SKILL.md"
         if not safe_file(file) or sha256(file.read_bytes()) != entry["skill_sha256"]:
             failures.append(skill_id)
+            continue
+        for relative, expected in entry.get("file_sha256", {}).items():
+            if Path(relative).is_absolute() or ".." in Path(relative).parts:
+                failures.append(skill_id)
+                break
+            candidate = root / relative
+            if not safe_file(candidate) or sha256(candidate.read_bytes()) != expected:
+                failures.append(skill_id)
+                break
     if failures:
         print("Verification failed: " + ", ".join(failures), file=sys.stderr)
         return 1
