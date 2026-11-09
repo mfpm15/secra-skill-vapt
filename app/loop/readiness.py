@@ -77,8 +77,8 @@ def short_capabilities(report: dict) -> str:
                in {"gated", "operator_review", "blocked"}]
     return (
         "SECRA " + report["mode"] + "/" + report["task_status"]
-        + " offline tool preflight (not approval). Eligible by mode: "
+        + " OFFLINE ONLY; fence/scope NOT attested. Eligible by mode: "
         + (", ".join(runnable) or "none") + ". "
         + "Restricted: " + (", ".join(guarded) or "none")
-        + ". Live fence/scope are NOT attested."
+        + "."
     )[:490]
