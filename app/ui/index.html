@@ -120,5 +120,5 @@ $("start").onclick=async()=>{
  }catch(e){badge("Error");$("notice").textContent=e.message;}finally{$("start").disabled=false;}
 };
 $("stop").onclick=async()=>{if(!task)return;try{await api("/api/tasks/"+encodeURIComponent(task)+"/stop","POST",{});badge("stopped");$("stop").disabled=true;runSerial++;await approvals();}catch(e){badge(e.message);}};
-$("mode").onchange=()=>{if(["demo","local"].includes(ctl("mode"))){$("target").value="127.0.0.1";$("scope").value="127.0.0.1/32";}};
+$("mode").onchange=()=>{const local=["demo","local"].includes(ctl("mode"));$("target").placeholder=local?"Demo/lab example: 127.0.0.1":"Enter your explicitly authorized IPv4";$("scope").placeholder=local?"Demo/lab example: 127.0.0.1/32":"Enter the exact approved CIDR";};
 </script></body></html>
