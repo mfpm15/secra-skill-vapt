@@ -86,7 +86,7 @@ class ToolDispatcher:
             return receipt("denied", None, "Invalid manifest tool, task or tool parameters.")
         tid = task["id"]
         # Read-only checkpoint is explicitly permitted after a task ends.
-        is_handoff = tool.adapter == "continuity_handoff"
+        is_handoff = tool.adapter in {"continuity_handoff", "capability_readiness"}
         if not is_handoff and (task["status"] != "running" or self.store.is_stopped(tid)):
             return receipt("denied", None, "Task is not running or has been stopped.")
         if is_handoff and task["status"] not in {
@@ -106,6 +106,12 @@ class ToolDispatcher:
         if cancelled.is_set():
             return receipt("cancelled", None, "Operator stopped the task.")
         try:
+            if tool.adapter == "capability_readiness":
+                from app.loop.readiness import inspect_capabilities, short_capabilities
+                report = inspect_capabilities(self.store, self.manifest, tid)
+                result = receipt("completed", 0, short_capabilities(report))
+                self.store.append(tid, "tool", name, "done", result["summary"])
+                return result
             if tool.adapter == "lead_proposal":
                 from app.loop.leads import LeadRegistry
                 lead = LeadRegistry(self.store).create(
