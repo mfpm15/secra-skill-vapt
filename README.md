@@ -38,6 +38,20 @@ The agent loop is bounded to **25 tool steps and 20 minutes**; a stopped, refuse
 
 For regression testing install `requirements-dev.txt` and run `python -m pytest tests/e2e -q -ra` and `python -m pytest -m "not lab" -q`. Privileged `tests/fence/ -m lab` requires an independently provisioned Kali VM; no lab proofs have been provided.
 
+## OpenCode V2 global installation (Kali Linux)
+
+**Recommended:** install native OpenCode V2 skills and 13 agent profiles globally under `~/.config/opencode/`. Use `secra-vapt` and `secra-ctf` from **any working directory**; the repository checkout is needed only for installation and the optional MCP backend. Operators configure each engagement's authorized target/scope inside the local SECRA UI, not through hardcoded agent settings.
+
+~~~bash
+python3 scripts/opencode_global.py install --major 2 --dry-run
+python3 scripts/opencode_global.py install --major 2
+python3 scripts/opencode_global.py verify --major 2
+python3 scripts/opencode_toolcheck.py
+opencode --agent secra-vapt
+~~~
+
+Installation **does not** grant unrestricted shell or live network access. SECRA MCP is opt-in and reviewed live tools remain subject to scope and kernel egress attestation. To enable MCP globally and optionally install externally reviewed knowledge see [docs/OPENCODE-V2-GLOBAL.md](docs/OPENCODE-V2-GLOBAL.md).
+
 ## OpenCode (Kali Linux) — curated VAPT/CTF knowledge
 
 SECRA includes a **no-execution Python installer** for OpenCode skills and two project agents. Read [docs/OPENCODE-KALI.md](docs/OPENCODE-KALI.md) for scoped Kali setup, optional pre-reviewed third-party knowledge imports and version-aware MCP configuration.

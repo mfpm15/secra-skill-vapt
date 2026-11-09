@@ -41,8 +41,8 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <section class="cols"><div class="panel">
 <h2>New engagement</h2>
 <label for="token">Operator token</label><input id="token" type="password" placeholder="Token displayed in local terminal" autocomplete="off">
-<label for="target">Authorized target</label><input id="target" value="127.0.0.1" spellcheck="false">
-<label for="scope">Explicit scope / CIDR</label><input id="scope" value="127.0.0.1/32" spellcheck="false">
+<label for="target">Authorized target · isi sendiri</label><input id="target" placeholder="Contoh lab lokal: 127.0.0.1" spellcheck="false" required>
+<label for="scope">Explicit scope / CIDR · isi sendiri</label><input id="scope" placeholder="Contoh lab lokal: 127.0.0.1/32" spellcheck="false" required>
 <label for="mode">Mode</label><select id="mode"><option value="demo">Offline demo · zero network</option><option value="live">Live · fenced gateway only</option><option value="local">Real local HTTP HEAD · 127.0.0.1 only</option></select>
 <label for="model">9Router model ID (blank = fake model in demo)</label><input id="model" placeholder="e.g. glm/model" autocomplete="off" spellcheck="false">
 <div class="checkline"><input id="authorized" type="checkbox"><span>I confirm explicit written authorization for the supplied scope.</span></div>
