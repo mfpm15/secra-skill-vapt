@@ -6,6 +6,7 @@ include its address, credentials, raw tool output, or unmasked model messages.
 from __future__ import annotations
 
 import ipaddress
+import datetime as dt
 import json
 import os
 import re
@@ -56,6 +57,16 @@ class TaskStore:
                 id TEXT PRIMARY KEY, task_id TEXT NOT NULL, tool TEXT NOT NULL,
                 risk TEXT NOT NULL, state TEXT NOT NULL,
                 created TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
+            # Audited invocations, recorded BEFORE dispatch, UTC timestamps.
+            # No argv, target, scope, credentials or raw tool output.
+            db.execute("""CREATE TABLE IF NOT EXISTS tool_runs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id TEXT NOT NULL, tool TEXT NOT NULL,
+                started_at TEXT NOT NULL, finished_at TEXT,
+                duration_ms INTEGER, status TEXT NOT NULL,
+                exit_code INTEGER, output_ref TEXT)""")
+            db.execute("CREATE INDEX IF NOT EXISTS tool_runs_task "
+                       "ON tool_runs(task_id,id)")
         os.chmod(self.path, 0o600)
 
     def _db(self):
@@ -152,6 +163,61 @@ class TaskStore:
                 "SELECT seq,kind,tool,status,summary,output_ref,stamp "
                 "FROM events WHERE task_id=? AND seq>? ORDER BY seq LIMIT ?",
                 (tid, after, limit))]
+
+
+    @staticmethod
+    def utc_now() -> str:
+        """Actual UTC wall-clock timestamp; never reconstruct phase times."""
+        return dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds")
+
+    def begin_tool_run(self, tid: str, tool: str) -> int:
+        """Durably log invocation BEFORE dispatch, including direct MCP calls.
+
+        The caller must abort execution when this method fails. Arguments and
+        customer addresses are intentionally never included in this record.
+        """
+        self.require(tid)
+        if not isinstance(tool, str) or not re.fullmatch(r"[A-Za-z0-9_.-]{1,80}", tool):
+            raise TaskError("TOOL_AUDIT_NAME_INVALID")
+        with self._db() as db:
+            cursor = db.execute(
+                "INSERT INTO tool_runs(task_id,tool,started_at,status) VALUES(?,?,?,?)",
+                (tid, tool, self.utc_now(), "requested"))
+            return cursor.lastrowid
+
+    def finish_tool_run(self, tid: str, audit_id: int, status: str,
+                        exit_code: int | None, duration_ms: int,
+                        output_ref: str | None = None) -> None:
+        """Record outcomes without treating a receipt as a verified finding."""
+        self.require(tid)
+        if (type(audit_id) is not int or audit_id <= 0
+                or status not in {"completed", "simulated", "denied", "blocked",
+                                  "approval_required", "cancelled", "error"}
+                or type(duration_ms) is not int or not 0 <= duration_ms <= 7_200_000
+                or (exit_code is not None and
+                    (type(exit_code) is not int or not -255 <= exit_code <= 255))
+                or (output_ref is not None and
+                    not re.fullmatch(r"evidence://[a-f0-9-]{36}/[a-f0-9-]{36}", output_ref))):
+            raise TaskError("TOOL_AUDIT_OUTCOME_INVALID")
+        with self._db() as db:
+            updated = db.execute(
+                "UPDATE tool_runs SET finished_at=?,duration_ms=?,status=?,"
+                "exit_code=?,output_ref=? WHERE id=? AND task_id=? AND status='requested'",
+                (self.utc_now(), duration_ms, status, exit_code, output_ref,
+                 audit_id, tid))
+            if updated.rowcount != 1:
+                raise TaskError("TOOL_AUDIT_STATE_INVALID")
+
+    def tool_runs(self, tid: str, *, limit: int = 200) -> list[dict]:
+        """Bounded sanitized execution ledger for continuity and evaluations."""
+        self.require(tid)
+        if type(limit) is not int or not 1 <= limit <= 200:
+            raise TaskError("TOOL_AUDIT_LIMIT_INVALID")
+        with self._db() as db:
+            return [dict(r) for r in db.execute(
+                "SELECT id,tool,started_at,finished_at,duration_ms,status,"
+                "exit_code,output_ref FROM tool_runs WHERE task_id=? "
+                "ORDER BY id DESC LIMIT ?", (tid, limit))][::-1]
 
     def request_approval(self, tid: str, tool: str, risk: str) -> str:
         self.require(tid)
