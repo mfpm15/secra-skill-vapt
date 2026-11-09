@@ -108,6 +108,7 @@ def _reviewed_details(lead: dict, raw: object,
     }
     submitted = raw.get("evidence_refs")
     if (len(expected_refs) != 2 or not isinstance(submitted, list)
+            or not all(isinstance(x, str) for x in submitted)
             or set(submitted) != expected_refs or len(submitted) != 2):
         issues.append("two_exact_sealed_evidence_refs_required")
     if raw.get("severity") not in SEVERITIES:
@@ -129,7 +130,7 @@ def _reviewed_details(lead: dict, raw: object,
         issues.append("reproduction_steps_incomplete")
     if raw.get("cvss_vector"):
         vector = raw.get("cvss_vector")
-        if not isinstance(vector, str) or not re.fullmatch(r"CVSS:4\\.0/[A-Z0-9:/._-]{10,240}", vector):
+        if not isinstance(vector, str) or not re.fullmatch(r"CVSS:4\.0/[A-Z0-9:/._-]{10,240}", vector):
             issues.append("cvss_vector_invalid")
         else:
             details["cvss_vector"] = vector
@@ -333,6 +334,7 @@ def build_report(store: TaskStore, task_id: str, operator: dict) -> dict:
     return {
         "schema": "secra-professional-report-v1",
         "quality": "reviewed" if integrity_ok and operator_confirmed and not excluded
+                   and task["mode"] != "demo" and not truncated
                    else "draft_requires_operator_review",
         "confirmed_findings": len(approved),
         "excluded_candidates": excluded,
