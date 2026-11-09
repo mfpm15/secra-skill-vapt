@@ -124,3 +124,30 @@ def test_reference_tampering_detected(tmp_path):
     assert installer.verify(destination) == 0
     (destination / "secra-test-ref" / "references" / "triage.md").write_text("TAMPERED", encoding="utf-8")
     assert installer.verify(destination) != 0
+
+
+def test_trailofbits_semgrep_allowlist_matches_upstream_layout():
+    entries = [
+        entry for entry in installer.EXTERNAL
+        if entry[2] == "secra-tob-static-analysis"
+    ]
+    assert len(entries) == 1
+    source_dir, relative, skill_id, description = entries[0]
+    assert source_dir == "trailofbits-skills"
+    assert relative == "plugins/static-analysis/skills/semgrep"
+    assert "reference" in description.lower()
+    assert "script" in description.lower()
+
+
+def test_semgrep_reference_does_not_import_executable_sidecar(tmp_path):
+    source = tmp_path / "trailofbits-skills" / "plugins" / "static-analysis" / "skills" / "semgrep"
+    source.mkdir(parents=True)
+    (source / "SKILL.md").write_text("---\nname: semgrep\n---\n# Semgrep\n", encoding="utf-8")
+    (source / "scripts").mkdir()
+    (source / "scripts" / "run-scans.sh").write_text("echo NOPE\n", encoding="utf-8")
+    files = installer.build_skill(
+        source, "secra-tob-static-analysis", "Semgrep static analysis reference.",
+        "trailofbits-skills:plugins/static-analysis/skills/semgrep", True
+    )
+    assert "SKILL.md" in files
+    assert "scripts/run-scans.sh" not in files
