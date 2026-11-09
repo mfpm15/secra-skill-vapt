@@ -29,6 +29,8 @@ def scenario(tmp_path):
     store.finish_tool_run(first, audit, "completed", 0, 1, receipt)
     store.append(first, "tool", "local.http_head", "done", "Local synthetic fixture.", receipt)
     store.append(second, "task", "", "done", "UNRELATED ENGAGEMENT PRIVATE MARKER")
+    store.start(first)
+    store.set_status(first, "completed", "Controlled offline case finished.")
     WorkspaceManager(store.root / "engagements").write_manifest(first)
     return store, first, second, rid
 
