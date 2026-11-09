@@ -11,7 +11,7 @@ from app.loop.store import TaskStore
 from app.mcp.manifest import ToolManifest
 
 NO_EXECUTE = frozenset({"stopped", "failed", "completed", "exhausted", "refused"})
-READ_ONLY = frozenset({"inventory_read", "continuity_handoff", "capability_readiness"})
+READ_ONLY = frozenset({"continuity_handoff", "capability_readiness"})
 
 
 def inspect_capabilities(store: TaskStore, manifest: ToolManifest, task_id: str) -> dict:
