@@ -27,9 +27,14 @@ SHA = re.compile(r"^[0-9a-f]{40}$")
 def _git(*args: str) -> str:
     proc = subprocess.run(
         ["git", "-c", "protocol.file.allow=never",
-         "-c", "protocol.ext.allow=never", *args],
+         "-c", "protocol.ext.allow=never",
+         "-c", "core.hooksPath=/dev/null",
+         "-c", "filter.lfs.smudge=",
+         "-c", "filter.lfs.required=false",
+         *args],
         capture_output=True, text=True, timeout=120, check=False,
-        env={**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_CONFIG_NOSYSTEM": "1"},
+        env={**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_CONFIG_NOSYSTEM": "1",
+             "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_LFS_SKIP_SMUDGE": "1"},
     )
     if proc.returncode:
         raise ValueError("git failed (no source content executed): " +
