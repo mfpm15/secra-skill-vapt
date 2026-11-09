@@ -83,3 +83,32 @@ def test_no_scope_no_task_creation_and_cli_requires_operator_confirmation(tmp_pa
     assert result["network_scope_configured"] is False
     assert result["network_execution_authorized"] is False
     assert store.require(result["task_id"])["scope"] == ""
+
+
+def test_operator_can_complete_evidence_case_without_running_a_model(tmp_path):
+    script = ROOT / "scripts" / "secra_evidence_task.py"
+    new = subprocess.run([
+        sys.executable, str(script), "--data-dir", str(tmp_path),
+        "--confirm-authorization",
+    ], cwd="/tmp", capture_output=True, text=True)
+    assert new.returncode == 0, new.stderr
+    tid = json.loads(new.stdout)["task_id"]
+    denied = subprocess.run([
+        sys.executable, str(script), "--data-dir", str(tmp_path),
+        "--finish-task-id", tid,
+    ], cwd="/tmp", capture_output=True, text=True)
+    assert denied.returncode != 0
+    store = TaskStore(tmp_path)
+    assert store.require(tid)["status"] == "running"
+    completed = subprocess.run([
+        sys.executable, str(script), "--data-dir", str(tmp_path),
+        "--finish-task-id", tid, "--confirm-completion",
+    ], cwd="/tmp", capture_output=True, text=True)
+    assert completed.returncode == 0, completed.stderr
+    assert json.loads(completed.stdout)["network_execution_authorized"] is False
+    assert store.require(tid)["status"] == "completed"
+    duplicate = subprocess.run([
+        sys.executable, str(script), "--data-dir", str(tmp_path),
+        "--finish-task-id", tid, "--confirm-completion",
+    ], cwd="/tmp", capture_output=True, text=True)
+    assert duplicate.returncode != 0
