@@ -19,6 +19,11 @@ jobs:
         run: python -m compileall -q app vendor/sapper_v2 scripts
       - name: Offline OpenCode skill and MCP config regression tests
         run: python -m pytest tests/opencode -q -ra
+      - name: Process lead registry, workspace lifecycle and handoff regression
+        env:
+          SECRA_DASHBOARD_TOKEN: ci-local-process-token
+          SECRA_DATA_DIR: /tmp/secra-process-test
+        run: python -m pytest tests/process tests/continuity tests/workspace -q -ra
       - name: Phase 1 masking corpus and leakage acceptance tests (zero skipped)
         env:
           SECRA_DASHBOARD_TOKEN: ci-test-token-only
