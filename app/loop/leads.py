@@ -10,9 +10,11 @@ from __future__ import annotations
 import re
 import sqlite3
 import uuid
+from uuid import UUID
 from collections import Counter
 
 from app.security import redact
+from app.evidence_vault import EvidenceVault, EvidenceError
 from .store import TaskError, TaskStore, canonical_id
 
 CATEGORIES = frozenset({
@@ -90,6 +92,14 @@ class LeadRegistry:
                 (task_id, reference)).fetchone()
         if row is None:
             raise LeadError("LEAD_EVIDENCE_NOT_A_COMPLETED_TOOL_RECEIPT")
+        # Provenance means more than a SQLite row: require the local encrypted
+        # artifact to carry an intact AES-GCM authenticated seal. Never return
+        # the decrypted bytes or their contents to the model or API.
+        try:
+            EvidenceVault(self.store.root / "evidence").verify_and_read(
+                UUID(match.group(1)), UUID(match.group(2)))
+        except (EvidenceError, ValueError, OSError) as exc:
+            raise LeadError("LEAD_EVIDENCE_SEAL_INVALID_OR_MISSING") from exc
 
     def create(self, task_id: str, category: str, title: str,
                *, primary_ref: str | None = None) -> dict:
