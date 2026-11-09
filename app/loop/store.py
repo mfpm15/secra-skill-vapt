@@ -116,6 +116,19 @@ class TaskStore:
             raise TaskError("TASK_NOT_AUTHORIZED")
         return dict(row)
 
+    def _note_test_phase(self, tid: str, event: str) -> None:
+        """Supplementary UTC workspace phase marker; DB state is authoritative.
+
+        Phase file I/O may fail independently of SQLite; never invent a
+        timestamp or retroactively pretend that it was committed.
+        """
+        try:
+            WorkspaceManager(self.root / "engagements").record_phase(
+                tid, "testing", event)
+        except (OSError, WorkspaceError):
+            self.append(tid, "task", "", "error",
+                        "Workspace testing-phase marker unavailable; DB task state remains authoritative.")
+
     def start(self, tid: str) -> None:
         with self._db() as db:
             result = db.execute("UPDATE tasks SET status='running', stop=0 WHERE id=? AND status='created'",
@@ -123,6 +136,7 @@ class TaskStore:
             if result.rowcount != 1:
                 raise TaskError("TASK_NOT_STARTABLE")
         self.append(tid, "task", "", "running", "Authorized workflow started.")
+        self._note_test_phase(tid, "started")
 
     def set_status(self, tid: str, status: str, message: str) -> None:
         if status not in STATUSES:
@@ -133,12 +147,16 @@ class TaskStore:
         with self._db() as db:
             db.execute("UPDATE tasks SET status=? WHERE id=?", (status, tid))
         self.append(tid, "task", "", status, message)
+        if status in {"completed", "failed", "exhausted", "refused", "awaiting_approval"}:
+            self._note_test_phase(
+                tid, "completed" if status == "completed" else "blocked")
 
     def stop(self, tid: str) -> None:
         self.require(tid)
         with self._db() as db:
             db.execute("UPDATE tasks SET stop=1,status='stopped' WHERE id=?", (canonical_id(tid),))
         self.append(tid, "task", "", "stopped", "Operator requested emergency stop.")
+        self._note_test_phase(tid, "blocked")
 
     def is_stopped(self, tid: str) -> bool:
         t = self.require(tid)
