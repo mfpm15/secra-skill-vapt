@@ -6,6 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import yaml
+
 from scripts import opencode_global
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -110,3 +112,22 @@ def test_offline_toolcheck_does_not_execute_security_tools():
     assert "missing" in report["groups"]["recon"]
     assert len(report["manifest"]) >= 5
     assert "not execution authorization" in report["disclaimer"]
+
+
+def test_all_global_agents_parse_as_valid_native_v2_frontmatter():
+    for name in opencode_global.AGENTS:
+        content = opencode_global.agent_text(name, 2)
+        assert content.startswith("---\n")
+        separator = "\n---\n"
+        _, _, body = content.partition(separator)
+        assert body, name
+        frontmatter = content[len("---\n"):content.index(separator)]
+        metadata = yaml.safe_load(frontmatter)
+        assert metadata["mode"] in {"primary", "subagent"}
+        assert isinstance(metadata["permissions"], list)
+        for rule in metadata["permissions"]:
+            assert set(rule) == {"action", "resource", "effect"}
+            assert rule["effect"] in {"allow", "ask", "deny"}
+            assert isinstance(rule["action"], str)
+            assert isinstance(rule["resource"], str)
+        assert metadata["permissions"][0] == {"action": "*", "resource": "*", "effect": "deny"}
