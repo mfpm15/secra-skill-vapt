@@ -20,6 +20,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 AGENTS = (
+    "secra",
     "secra-vapt", "secra-ctf",
     "secra-recon", "secra-web", "secra-api", "secra-network",
     "secra-verifier", "secra-reporter", "secra-ctf-web",
@@ -62,9 +63,9 @@ def agent_text(agent_name: str, major: int) -> str:
     if not marker:
         raise ValueError("Missing template frontmatter terminator")
     desc = (
-        "Scoped SECRA VAPT assistant with reviewed tools and evidence."
-        if agent_name == "secra-vapt"
-        else "CTF challenge assistant for isolated, authorized labs."
+        "Unified SECRA coordinator for VAPT, CTF, code and bug bounty."
+        if agent_name == "secra"
+        else "Scoped SECRA security specialist for authorized work."
     )
     bash_effect = "ask" if agent_name == "secra-ctf" else "deny"
     # Avoid mixed V1 and V2 frontmatter fields. Generate each natively.
@@ -278,6 +279,11 @@ def main() -> int:
     p.add_argument("--external-root", type=Path)
     p.add_argument("--reviewed-external", action="store_true")
     p.add_argument("--with-mcp", action="store_true", help="Explicitly opt in to global MCP integration")
+    p.add_argument("--with-launcher", action="store_true",
+                   help="Install/verify the user-owned one-command secra launcher")
+    p.add_argument("--launcher-dir", type=Path,
+                   default=Path.home() / ".local" / "bin",
+                   help="Override CLI launcher directory (default ~/.local/bin)")
     p.add_argument("--mcp-preview", action="store_true", help="Print only version-specific MCP fragment")
     p.add_argument("--replace", action="store_true", help="Backup/upgrade only previously managed profiles/skills")
     p.add_argument("--dry-run", action="store_true")
@@ -288,6 +294,11 @@ def main() -> int:
             return 0
         destination = args.config_dir.expanduser()
         learning = args.learning_dir.expanduser()
+        if args.with_launcher and args.major != 2:
+            raise ValueError("Unified secra launcher requires OpenCode v2")
+        launcher_path = args.launcher_dir.expanduser() / "secra"
+        if args.with_launcher and args.launcher_dir.expanduser().is_symlink():
+            raise ValueError("Launcher directory symlink not allowed")
         if destination.is_symlink() or learning.is_symlink():
             raise ValueError("Global install destination must not be a symlink")
         if args.with_external and (not args.reviewed_external or args.external_root is None):
@@ -297,14 +308,25 @@ def main() -> int:
         if args.command == "verify":
             run_skills(destination, args)
             agents_verify(destination)
+            if args.with_launcher:
+                from scripts.secra_launcher import verify as verify_launcher
+                verify_launcher(launcher_path)
             return 0
         run_skills(destination, args)
         agents_install(destination, args.major, args.replace, args.dry_run)
+        if args.with_launcher:
+            from scripts.secra_launcher import install as install_launcher
+            print(install_launcher(
+                launcher_path, replace=args.replace, dry_run=args.dry_run))
         if args.with_mcp:
             mcp_install(destination, args.major, args.dry_run)
         if not args.dry_run:
             for folder in (learning / "inbox", learning / "reviewed"):
                 folder.mkdir(parents=True, mode=0o700, exist_ok=True)
+        if args.with_launcher:
+            print("One-command launcher:", launcher_path)
+            if str(args.launcher_dir.expanduser()) not in os.environ.get("PATH", "").split(os.pathsep):
+                print("Add this directory to PATH in your own shell profile:", args.launcher_dir.expanduser())
         print("OpenCode global config:", destination)
         print("Reviewed learning folder:", learning / "reviewed")
         return 0
