@@ -133,3 +133,14 @@ def test_handoff_cli_from_other_cwd_and_private_file(tmp_path):
         "--output", str(target_file),
     ], capture_output=True, text=True)
     assert again.returncode != 0
+
+
+def test_legacy_event_without_live_tool_audit_marked_incomplete(tmp_path):
+    store, dispatcher, tid = fixture(tmp_path)
+    store.append(tid, "tool", "demo.nmap_scan", "done",
+                 "Historical demo observation with no instrumented tool audit.")
+    snapshot = build_handoff(store, tid)
+    assert snapshot["metrics"]["tool_invocations_in_window"] == 0
+    assert snapshot["metrics"]["audit_coverage"] == "incomplete_or_unknown"
+    assert snapshot["metrics"]["possible_legacy_uninstrumented_tool_events"] == 1
+    assert snapshot["metrics"]["ttfv_seconds"] is None
