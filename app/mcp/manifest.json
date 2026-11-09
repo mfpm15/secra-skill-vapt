@@ -281,6 +281,26 @@
           "title"
         ]
       }
+    },
+    {
+      "name": "workflow.capabilities",
+      "description": "Read-only task capability inventory. Shows mode-compatible reviewed tools; does not attest kernel fence, scope, or execute any target operation.",
+      "risk": "R0",
+      "adapter": "capability_readiness",
+      "mode": "both",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      }
     }
   ]
 }
