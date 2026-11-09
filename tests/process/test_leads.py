@@ -233,3 +233,17 @@ def test_mcp_exposes_no_agent_verification_tool(tmp_path):
     assert "workflow.lead_verify" not in names
     assert "workflow.lead_signoff" not in names
     assert dispatcher.manifest.get("workflow.lead_propose").risk == "R0"
+
+
+def test_repeat_proposal_rejected_after_negative_record(tmp_path):
+    store, tid, reg = scenario(tmp_path, mode="demo")
+    store.start(tid)
+    dispatcher = ToolDispatcher(tmp_path, store=store)
+    args = {"task_id": tid, "category": "web", "title": "Header forwarding hypothesis"}
+    assert dispatcher.call("workflow.lead_propose", args)["status"] == "completed"
+    assert dispatcher.call("workflow.lead_propose", args)["status"] == "blocked"
+    row = reg.list(tid)[0]
+    reg.transition(tid, row["id"], "negative",
+                   reason="no_effect", expected_version=1)
+    assert dispatcher.call("workflow.lead_propose", args)["status"] == "blocked"
+    assert len(reg.list(tid)) == 1
