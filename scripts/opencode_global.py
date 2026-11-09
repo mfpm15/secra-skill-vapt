@@ -319,6 +319,14 @@ def main() -> int:
         run_skills(destination, args)
         agents_install(destination, args.major, args.replace, args.dry_run)
         if args.with_launcher:
+            if not args.dry_run:
+                managed = safe_receipt(destination / RECEIPT)["agents"].get("secra")
+                primary = destination / "agents" / "secra.md"
+                if (not isinstance(managed, dict) or primary.is_symlink()
+                        or not primary.is_file()
+                        or managed.get("sha256") != digest(primary.read_bytes())
+                        or primary.read_text(encoding="utf-8") != agent_text("secra", args.major)):
+                    raise ValueError("Unified secra primary agent is not installed and verified")
             print(secra_launcher.install(
                 launcher_path, replace=args.replace, dry_run=args.dry_run))
         if args.with_mcp:
