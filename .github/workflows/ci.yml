@@ -16,7 +16,9 @@ jobs:
       - name: Install dependencies
         run: python -m pip install -r requirements-dev.txt
       - name: Compile Python and pinned Sapper-v2
-        run: python -m compileall -q app vendor/sapper_v2
+        run: python -m compileall -q app vendor/sapper_v2 scripts
+      - name: Offline OpenCode skill and MCP config regression tests
+        run: python -m pytest tests/opencode -q -ra
       - name: Phase 1 masking corpus and leakage acceptance tests (zero skipped)
         env:
           SECRA_DASHBOARD_TOKEN: ci-test-token-only
