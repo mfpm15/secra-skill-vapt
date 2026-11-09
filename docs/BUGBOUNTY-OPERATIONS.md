@@ -89,6 +89,30 @@ python3 "$REPO/scripts/secra_live_preflight.py" \
 
 This static preflight never performs scans, uses sudo or proves network isolation. It checks systemd backend selection, root-controlled fence metadata, wrapper ownership and pinned binary digests. It intentionally exits with status 2 to indicate that privileged Kali kernel/BPF isolation is **not** independently attested. Run the existing Kali fence lab suite with authorized, disposable network namespaces before relying on live tooling.
 
+## 5. Real HTTP evidence import (operator-captured HAR, no simulator)
+
+When the live kernel fence is not yet attested, you can still work with **real** traffic captured *manually* from an explicitly authorized application in your local browser or HTTP proxy. Export a HAR file to your Kali machine. Treat HAR as sensitive: it can contain cookies, bearer tokens, request bodies and personal data.
+
+The operator must specify an exact allowlist of program-approved hostnames; wildcard host patterns are rejected. The importer rejects entries from all other hosts, seals the filtered raw HTTP captures into the local AES-GCM evidence vault, and returns only aggregate statuses, header presence and cookie-attribute counts. It does **not** contact those hosts, run scanners, discover subdomains, or assert that headers are valid bounty findings.
+
+~~~bash
+REPO="$HOME/.local/share/secra/repo"
+TASK_ID="YOUR-AUTHORIZED-TASK-UUID"
+
+# Export HAR from an operator-authorized browser/proxy, then:
+chmod 600 "$HOME/private-capture.har"
+
+python3 "$REPO/scripts/secra_har_import.py" \
+  --task-id "$TASK_ID" \
+  --har "$HOME/private-capture.har" \
+  --approved-host "YOUR-EXACT-IN-SCOPE-HOSTNAME" \
+  --confirm-program-scope
+~~~
+
+The sealed evidence reference can be added to an operator-reviewed hypothesis. A single captured HTTP header, missing CSP, or cookie flag is **not** proof of exploitable impact. A program brief may exclude low-impact header observations or require separate user impact demonstrations.
+
+Privacy boundary: the raw accepted HAR stays encrypted locally; it is not provided to OpenCode's remote model as raw text. Only approved aggregate metadata and opaque evidence references may be shared. The operator must independently confirm not only hostname scope but any excluded paths or methods in the program brief.
+
 ## Remaining engineering work
 
 - Actual wildcard DNS scope, rebind resistance and program-level HTTP rate limiting.
