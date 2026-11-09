@@ -10,6 +10,7 @@ from app.evidence_vault import EvidenceVault
 from app.loop.continuity import build_handoff, short_handoff
 from app.loop.leads import LeadRegistry, LeadError
 from app.loop.store import TaskStore
+from app.mcp.dispatcher import ToolDispatcher
 
 
 def scenario(tmp_path, mode="local"):
@@ -157,3 +158,17 @@ def test_compact_mcp_handoff_carries_active_lead_without_title_or_scope(tmp_path
     assert "Object permission hypothesis" not in summary
     assert "127.0.0.1" not in summary
     assert "No findings verified" in summary
+
+
+def test_actual_mcp_handoff_receipt_contains_safe_unfinished_lead(tmp_path):
+    store, tid, reg = scenario(tmp_path, mode="demo")
+    lead = reg.create(tid, "web", "Authentication flow question")
+    store.start(tid)
+    dispatcher = ToolDispatcher(tmp_path, store=store)
+    response = dispatcher.call("workflow.handoff", {"task_id": tid})
+    assert response["status"] == "completed"
+    assert lead["id"] in response["summary"]
+    assert "Authentication flow question" not in response["summary"]
+    assert "127.0.0.1" not in response["summary"]
+    assert response["masked"] is True
+    assert response["output_ref"].startswith("evidence://")
