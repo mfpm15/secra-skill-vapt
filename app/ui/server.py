@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 from app.loop.agent import AgentLoop
 from app.loop.store import TaskStore, TaskError
 from app.loop.continuity import build_handoff
+from app.workspace import WorkspaceManager, WorkspaceError
 from app.mcp.dispatcher import ToolDispatcher
 
 DATA = Path(os.environ.get("SECRA_DATA_DIR", str(Path(__file__).resolve().parents[2] / "data")))
@@ -44,6 +45,11 @@ class TaskForm(BaseModel):
 
 class ApprovalDecision(BaseModel):
     decision: str
+
+
+class PhaseDecision(BaseModel):
+    stage: str
+    event: str
 
 
 def auth(x_secra_token: str | None = Header(default=None)):
@@ -143,6 +149,58 @@ async def sse_events(tid: str, request: Request, after: int = 0):
     return StreamingResponse(stream(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-store",
                                       "X-Accel-Buffering": "no"})
+
+
+@app.get("/api/tasks/{tid}/workspace", dependencies=[Depends(auth)])
+def workspace_status(tid: str):
+    """Operator-only workspace health; no IP, CIDR or raw evidence."""
+    try:
+        STORE.require(tid)
+        manager = WorkspaceManager(STORE.root / "engagements")
+        directory = manager.require(tid)
+        phases = manager.phases(tid)
+        manifest = directory / "06-ledger/manifest.json"
+        return {"task_id": tid, "asset": "ASSET_001",
+                "workspace": str(directory),
+                "phase_events": len(phases),
+                "latest_phase": phases[-1] if phases else None,
+                "preflight_recorded": (directory / "00-preflight/local-readiness.json").is_file(),
+                "manifest_present": manifest.is_file()}
+    except (TaskError, WorkspaceError):
+        raise HTTPException(404, "Unknown task or workspace")
+
+
+@app.post("/api/tasks/{tid}/phase", dependencies=[Depends(auth)])
+def record_phase(tid: str, body: PhaseDecision):
+    """Explicit operator stage transition with real UTC timestamp."""
+    try:
+        STORE.require(tid)
+        return WorkspaceManager(STORE.root / "engagements").record_phase(
+            tid, body.stage, body.event)
+    except (TaskError, WorkspaceError) as exc:
+        raise HTTPException(400, "Invalid task or phase") from exc
+
+
+@app.post("/api/tasks/{tid}/manifest", dependencies=[Depends(auth)])
+def create_manifest(tid: str):
+    """Regenerate hashed inventory of workspace, never raw evidence content."""
+    try:
+        STORE.require(tid)
+        info = WorkspaceManager(STORE.root / "engagements").write_manifest(tid)
+        return {"status": "created", "task_id": tid,
+                "file_count": info["file_count"], "total_bytes": info["total_bytes"],
+                "duplicate_groups": len(info["duplicates"])}
+    except (OSError, TaskError, WorkspaceError) as exc:
+        raise HTTPException(400, "Cannot create workspace manifest") from exc
+
+
+@app.get("/api/tasks/{tid}/manifest/verify", dependencies=[Depends(auth)])
+def verify_manifest(tid: str):
+    try:
+        STORE.require(tid)
+        return WorkspaceManager(STORE.root / "engagements").verify_manifest(tid)
+    except (OSError, TaskError, WorkspaceError) as exc:
+        raise HTTPException(400, "Manifest unavailable or invalid") from exc
 
 
 @app.get("/api/tasks/{tid}/handoff", dependencies=[Depends(auth)])
