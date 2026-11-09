@@ -61,6 +61,8 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <button id="workspace-manifest" type="button">Create SHA-256 manifest</button>
 <button id="workspace-verify" type="button">Verify integrity</button>
 <button id="workspace-handoff" type="button">Handoff checkpoint</button>
+<button id="workspace-capabilities" type="button">Tool readiness</button>
+<button id="workspace-case-integrity" type="button">Case integrity</button>
 </div>
 <pre class="entry" id="workspace-output" style="white-space:pre-wrap;font-size:12px;max-height:310px;overflow:auto" aria-live="polite">Start or select a task to inspect its private workspace.</pre>
 </section>
@@ -138,6 +140,8 @@ async function workspaceAction(kind){
   if(kind==="status")result=await api(path+"/workspace");
   else if(kind==="manifest")result=await api(path+"/manifest","POST",{});
   else if(kind==="verify")result=await api(path+"/manifest/verify");
+  else if(kind==="capabilities")result=await api(path+"/capabilities");
+  else if(kind==="case-integrity")result=await api(path+"/case-integrity");
   else result=await api(path+"/handoff");
   const out=$("workspace-output");
   if(kind==="status"){
@@ -151,6 +155,8 @@ $("workspace-refresh").onclick=()=>workspaceAction("status");
 $("workspace-manifest").onclick=()=>workspaceAction("manifest");
 $("workspace-verify").onclick=()=>workspaceAction("verify");
 $("workspace-handoff").onclick=()=>workspaceAction("handoff");
+$("workspace-capabilities").onclick=()=>workspaceAction("capabilities");
+$("workspace-case-integrity").onclick=()=>workspaceAction("case-integrity");
 const LEAD_NEXT={
  "open":["testing","negative"],"testing":["open","negative","review_requested"],
  "negative":["testing"],"review_requested":["testing","verified","rejected"],
