@@ -166,7 +166,10 @@ def agents_verify(destination: Path) -> None:
 
 
 def global_mcp_preview(major: int) -> dict:
-    from opencode_mcp_config import build_config
+    try:
+        from scripts.opencode_mcp_config import build_config
+    except ModuleNotFoundError:  # Direct execution from scripts/ on Kali.
+        from opencode_mcp_config import build_config
     return build_config(major)["mcp"]
 
 
