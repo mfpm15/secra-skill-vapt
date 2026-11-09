@@ -97,7 +97,9 @@ class TaskStore:
         # Persist private alias-only workspace before accepting a new task.
         # Scope and target stay in the existing local TaskStore database.
         try:
-            WorkspaceManager(self.root / "engagements").initialize(tid)
+            workspace = WorkspaceManager(self.root / "engagements")
+            workspace.initialize(tid)
+            workspace.capture_preflight(tid)
         except (OSError, WorkspaceError) as exc:
             raise TaskError("WORKSPACE_INIT_FAILED") from exc
         with self._db() as db:
