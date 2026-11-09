@@ -32,11 +32,29 @@ python -m app.mcp.server --transport http --port 8766
 
 For stdio, let a trusted MCP client spawn the process and speak protocol over stdin/stdout (do not type interactive shell commands into it). For Streamable HTTP, use `http://127.0.0.1:8766/mcp` with `Authorization: Bearer $SECRA_DASHBOARD_TOKEN`; remote exposure, DNS-rebinding origins, and missing tokens are blocked. MCP tool schemas are exact manifest JSON Schemas. Outputs are `{status, exit_code, summary, output_ref, masked}`. `output_ref` is an `evidence://<engagement UUID>/<run UUID>` local reference—not an outbound download URL.
 
-Reviewed tools currently advertised (**11 total, with several demo/blocked or approval-only**): `inventory.read` (R0); `demo.nmap_scan` (R0, offline); `demo.httpx_probe` (R0, offline); `report.summary` (R0, offline); `local.http_head` (R2, real loopback-only HEAD); `nmap.tcp_top20` (R2, live gateway); `curl.http_head` (R2, live gateway); `http.authenticated_test` (R3, approval queue only); `prohibited.r4` (R4, always blocked); and `workflow.handoff` (R0, read-only sealed continuity checkpoint). `workflow.lead_propose` (R0, unverified, sanitized hypothesis proposal only). Add a new tool through an independently reviewed manifest entry and adapter stub. Agents cannot directly run arbitrary argv, install templates, use shells, or bypass the existing typed gateway.
+Reviewed tools currently advertised (**12 total, with several demo/blocked or approval-only**): `inventory.read` (R0); `demo.nmap_scan` (R0, offline); `demo.httpx_probe` (R0, offline); `report.summary` (R0, offline); `local.http_head` (R2, real loopback-only HEAD); `nmap.tcp_top20` (R2, live gateway); `curl.http_head` (R2, live gateway); `http.authenticated_test` (R3, approval queue only); `prohibited.r4` (R4, always blocked); and `workflow.handoff` (R0, read-only sealed continuity checkpoint). `workflow.lead_propose` (R0, unverified, sanitized hypothesis proposal only). `workflow.capabilities` (R0, offline mode-aware readiness; never attests the kernel fence). Add a new tool through an independently reviewed manifest entry and adapter stub. Agents cannot directly run arbitrary argv, install templates, use shells, or bypass the existing typed gateway.
 
 The agent loop is bounded to **25 tool steps and 20 minutes**; a stopped, refused or exhausted task cannot silently restart. Every selected tool and masked result is written to a sequenced local event ledger. R3 approvals are review-only until a separate audited adapter is installed, and R4 stays forbidden. The existing gateway still denies live network operations **until a real Kali kernel egress attestation is present**. The real local-loopback HEAD route is implemented and tested with a fake 9Router response and a genuine localhost HTTP server, but **no live 9Router model credentials or actual provider response were available for verification**. Genuine Kali Nmap/curl execution also remains gated by kernel attestation.
 
 For regression testing install `requirements-dev.txt` and run `python -m pytest tests/e2e -q -ra` and `python -m pytest -m "not lab" -q`. Privileged `tests/fence/ -m lab` requires an independently provisioned Kali VM; no lab proofs have been provided.
+
+## Complete offline agent smoke (v0.5 preview)
+
+Run a temporary, network-free synthetic workflow from any directory:
+
+~~~bash
+python3 /absolute/path/to/secra/scripts/secra_smoke.py
+~~~
+
+It exercises operator-style task creation, capability preflight, unverified lead proposal, the bounded FakeDemoModel→reviewed demo MCP adapters→vault loop, handoff, workspace manifest, and multi-source case-integrity check. It reports simulation-only results and never tests real external model correctness or Kali network execution. The backend also enforces SQLite-atomic call ceilings across model/MCP sessions to avoid unlimited retry loops.
+
+## Reliability and evidence-integrity preflight (v0.5 preview)
+
+New read-only MCP `workflow.capabilities` tells the agent which reviewed tools match the current task mode and status, distinguishing offline fixtures, loopback-only, proposals, approval-only, blocked and live-gated capabilities. It never connects to a target or claims fence attestation. OpenCode `secra-vapt` requests this before choosing a tool.
+
+New `scripts/secra_casecheck.py` validates the workspace SHA-256 manifest against files, each referenced AES-GCM evidence seal, and unfinished SQLite tool-run audit rows. Outputs are metadata only; decrypted evidence, scope, credentials and target IP are not returned. Use `--strict` for a nonzero exit if integrity requires review. A successful integrity check does **not** independently verify findings or turn the workspace-only archive into a full-case backup; SQLite and encrypted vault are still retained separately.
+
+The localhost operator console has **Tool readiness** and **Case integrity** controls. See [docs/AGENT-RELIABILITY.md](docs/AGENT-RELIABILITY.md) for commands and operational limits.
 
 ## Versioned operator lead registry (v0.4 preview)
 

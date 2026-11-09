@@ -233,3 +233,28 @@ def test_hypothesis_board_is_present_and_uses_safe_dom_methods(tmp_path, monkeyp
     assert "expected_version:item.version" in html
     assert "pane.append(card)" in html
     assert "innerHTML=" not in html
+
+
+def test_operator_preflight_and_case_integrity_ui_are_authenticated(tmp_path, monkeypatch):
+    from app.workspace import WorkspaceManager
+    client, store = build_client(tmp_path, monkeypatch)
+    tid = store.create("127.0.0.1", "127.0.0.1/32", mode="demo", authorized=True)
+    base = "/api/tasks/" + tid
+    headers = {"X-Secra-Token": "ci-ui-operator-token-123456"}
+    assert client.get(base + "/capabilities").status_code == 401
+    ready = client.get(base + "/capabilities", headers=headers)
+    assert ready.status_code == 200
+    assert ready.json()["live_execution_ready"] is False
+    assert "127.0.0.1" not in ready.text
+
+    assert client.get(base + "/case-integrity").status_code == 401
+    WorkspaceManager(tmp_path / "engagements").write_manifest(tid)
+    checked = client.get(base + "/case-integrity", headers=headers)
+    assert checked.status_code == 200
+    assert checked.json()["status"] == "integrity_ok"
+    assert checked.json()["archive_includes_encrypted_vault"] is False
+    assert "127.0.0.1" not in checked.text
+
+    html = client.get("/").text
+    for field in ("workspace-capabilities", "workspace-case-integrity"):
+        assert 'id="' + field + '"' in html

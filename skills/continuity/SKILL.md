@@ -7,6 +7,10 @@ description: Create privacy-safe engagement checkpoints, model handoffs and proc
 
 Use this skill for session transitions, model switching, phase changes, retrospective reviews and evidence-based progress updates.
 
+## Mandatory task capability preflight
+
+Call reviewed MCP `workflow.capabilities` with the opaque authorized task ID before selecting an execution tool. This function performs no network action and never claims the systemd fence is attested. A tool marked *gated* requires independent scope, fence, and binary verification at execution time; a tool marked *simulated* cannot demonstrate a live vulnerability. Repeat preflight after a task mode/status change.
+
 ## Data contract
 
 - Real customer scope is entered by the operator through the local SECRA UI.

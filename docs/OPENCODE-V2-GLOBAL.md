@@ -195,7 +195,7 @@ Agent `secra-vapt` akan meminta Anda mengisi engagement melalui UI SECRA lokal:
 
 ## Model handoff v0.3 (new)
 
-The globally installed `secra-agent-continuity` skill guides periodic checkpoints before model changes or at task completion. SECRA MCP now advertises **11 reviewed tools** including the read-only `workflow.handoff`. A checkpoint seals metadata-only tool receipts; it does not certify findings or authorize more network tools.
+The globally installed `secra-agent-continuity` skill guides periodic checkpoints before model changes or at task completion. SECRA MCP now advertises **12 reviewed tools** including the read-only `workflow.handoff`. A checkpoint seals metadata-only tool receipts; it does not certify findings or authorize more network tools.
 
 ~~~bash
 REPO="$HOME/.local/share/secra/repo"
@@ -205,6 +205,21 @@ python3 "$REPO/scripts/secra_handoff.py" --data-dir "$REPO/data" \
 ~~~
 
 The file is created with mode 0600. Do not use this command until a real task exists. New installs have **21 first-party skills** and optional 14 external references (35 total). For existing installs use `--replace` to update managed global agent profiles, preserving unmanaged files.
+
+## Capability and evidence-integrity checks (new)
+
+OpenCode v2.2.5 can call reviewed MCP `workflow.capabilities` with the operator-provided task UUID. This is a *nonexecuting* inventory: `gated` means a tool still requires local scope/fence/binary verification. A tool listed as `simulated` cannot establish a live finding. The agent profile permits this limited preflight without broadening shell or network privileges.
+
+The operator can inspect capabilities and case integrity from the SECRA localhost UI. The offline CLI works from any folder:
+
+~~~bash
+REPO="$HOME/.local/share/secra/repo"
+TASK_ID="ENTER-YOUR-VALID-TASK-UUID"
+python3 "$REPO/scripts/secra_casecheck.py" \
+  --task-id "$TASK_ID" --strict
+~~~
+
+The integrity report verifies manifest drift, unfinished tool audit rows, and referenced encrypted evidence seals, but **does not include** TaskStore SQLite or evidence keys/raw vault in the workspace archive. Do not interpret `integrity_ok` as proof of a valid vulnerability or completed customer report.
 
 ## 7. Jalankan dari folder mana pun
 

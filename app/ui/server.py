@@ -20,6 +20,8 @@ from pydantic import BaseModel, Field
 from app.loop.agent import AgentLoop
 from app.loop.store import TaskStore, TaskError
 from app.loop.continuity import build_handoff
+from app.loop.readiness import inspect_capabilities
+from app.loop.case_integrity import check_case
 from app.loop.leads import LeadRegistry, LeadError
 from app.workspace import WorkspaceManager, WorkspaceError
 from app.mcp.dispatcher import ToolDispatcher
@@ -258,6 +260,24 @@ def transition_lead(tid: str, lead_id: str, body: LeadUpdate):
             evidence_ref=body.evidence_ref, operator=True)
     except (TaskError, LeadError) as exc:
         raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/api/tasks/{tid}/capabilities", dependencies=[Depends(auth)])
+def task_capabilities(tid: str):
+    """Operator-only, nonexecuting inventory, never a live fence attestation."""
+    try:
+        return inspect_capabilities(STORE, DISPATCHER.manifest, tid)
+    except TaskError as exc:
+        raise HTTPException(404, "Unknown task") from exc
+
+
+@app.get("/api/tasks/{tid}/case-integrity", dependencies=[Depends(auth)])
+def task_case_integrity(tid: str):
+    """Check workspace/DB/vault linkage without exposing decrypted evidence."""
+    try:
+        return check_case(STORE, tid)
+    except TaskError as exc:
+        raise HTTPException(404, "Unknown task") from exc
 
 
 @app.get("/api/tasks/{tid}/handoff", dependencies=[Depends(auth)])
