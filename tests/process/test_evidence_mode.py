@@ -40,7 +40,6 @@ def test_offline_evidence_mode_never_receives_network_authority(tmp_path):
     assert dispatcher.call("workflow.handoff", {"task_id": tid})["status"] == "completed"
     with pytest.raises(TaskError, match="EVIDENCE_MODE"):
         AgentLoop(store, dispatcher).run(tid, model=FakeDemoModel())
-    assert task["target"] not in json.dumps([])  # no arbitrary target created
 
 
 def test_offline_evidence_mode_can_store_real_scope_filtered_har(tmp_path):
