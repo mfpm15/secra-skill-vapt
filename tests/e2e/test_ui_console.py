@@ -79,6 +79,24 @@ def test_operator_must_enter_scope_in_local_console(tmp_path, monkeypatch):
     assert 'id="scope" value=' not in html
 
 
+
+def test_operator_handoff_endpoint_is_authenticated_and_private(tmp_path, monkeypatch):
+    client, store = build_client(tmp_path, monkeypatch)
+    tid = store.create("127.0.0.1", "127.0.0.1/32", authorized=True)
+    denied = client.get("/api/tasks/" + tid + "/handoff")
+    assert denied.status_code == 401
+    headers = {"X-Secra-Token": "ci-ui-operator-token-123456"}
+    result = client.get("/api/tasks/" + tid + "/handoff", headers=headers)
+    assert result.status_code == 200
+    payload = result.json()
+    assert payload["schema"] == "secra-continuity-v1"
+    assert payload["task_id"] == tid
+    assert payload["verified_facts"] == []
+    assert payload["metrics"]["ttfv_seconds"] is None
+    assert "127.0.0.1" not in result.text
+    assert "scope" not in result.text
+
+
 def test_r3_ui_approval_is_review_only_and_r4_refused(tmp_path, monkeypatch):
     client, store = build_client(tmp_path, monkeypatch)
     headers = {"X-Secra-Token": "ci-ui-operator-token-123456"}
