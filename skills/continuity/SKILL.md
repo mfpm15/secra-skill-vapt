@@ -24,6 +24,7 @@ Use this skill for session transitions, model switching, phase changes, retrospe
 
 ## Durable hypotheses and review decisions
 
+- Agent coordinators may propose an unverified hypothesis using reviewed MCP `workflow.lead_propose` with category and short sanitized title only. The backend caps active leads at five; it never makes a tool execution authorization or findings decision. Operator reviews remain separate.
 - Lead records now live in the local authenticated operator SQLite process registry. Legacy `05-memory/leads.jsonl` files are scaffolds and not synchronized authoritative data.
 - `workflow.handoff` includes bounded active lead UUIDs, categories, statuses and negative/review counts. It does **not** expose private lead titles or details to a remote model.
 - Do not repeat a negative lead unless the operator records an explicit new rationale. A blocked command is not a negative vulnerability result.
