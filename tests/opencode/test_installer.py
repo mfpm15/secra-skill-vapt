@@ -49,6 +49,7 @@ def test_external_requires_manual_review(tmp_path):
     )
     assert result.returncode != 0
     assert "review" in result.stderr.lower()
+    assert not (tmp_path / "skills").exists()
 
 
 def test_importer_keeps_only_documents(tmp_path):
@@ -108,3 +109,18 @@ def test_v1_v2_mcp_config_differ_and_are_opt_in():
     assert "secra" in v2["mcp"]["servers"]
     assert v2["mcp"]["servers"]["secra"]["disabled"] is False
     assert v1 != v2
+
+
+def test_reference_tampering_detected(tmp_path):
+    source = tmp_path / "src"
+    (source / "references").mkdir(parents=True)
+    (source / "SKILL.md").write_text("# Triage\n", encoding="utf-8")
+    (source / "references" / "triage.md").write_text("Reviewed", encoding="utf-8")
+    files = installer.build_skill(source, "secra-test-ref", "Test.", "test:ref", True)
+    destination = tmp_path / "skills"
+    assert installer.install_one(destination, "secra-test-ref", files, False, False).startswith("INSTALLED")
+    receipt = {"schema": 1, "skills": {"secra-test-ref": json.loads(files[".secra-origin.json"])}}
+    (destination / installer.MANIFEST_NAME).write_text(json.dumps(receipt), encoding="utf-8")
+    assert installer.verify(destination) == 0
+    (destination / "secra-test-ref" / "references" / "triage.md").write_text("TAMPERED", encoding="utf-8")
+    assert installer.verify(destination) != 0
