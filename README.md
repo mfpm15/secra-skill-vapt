@@ -38,6 +38,10 @@ The agent loop is bounded to **25 tool steps and 20 minutes**; a stopped, refuse
 
 For regression testing install `requirements-dev.txt` and run `python -m pytest tests/e2e -q -ra` and `python -m pytest -m "not lab" -q`. Privileged `tests/fence/ -m lab` requires an independently provisioned Kali VM; no lab proofs have been provided.
 
+## Operator-captured real HAR observations (v0.6 preview)
+
+New `scripts/secra_har_import.py` accepts owner-only HAR exports from an operator-authorized browser/proxy, requires an explicit exact-host allowlist and manual scope affirmation, **discards unrelated host entries**, and seals selected real request/response records in SECRA's local AES-GCM vault. The CLI returns only aggregate status/header/cookie-attribute observations and an opaque evidence reference; it makes **zero network requests** and does not call a model. Imported captures can support local operator verification through the lead registry but are not self-proving vulnerabilities. Wildcard hostnames are rejected. See [docs/BUGBOUNTY-OPERATIONS.md](docs/BUGBOUNTY-OPERATIONS.md).
+
 ## Bug bounty casework and model evaluation (v0.6 preview)
 
 SECRA now includes **operator-only**, offline bug bounty report quality checks, a **per-task encrypted case bundle** that includes filtered SQLite plus the corresponding AES-GCM vault evidence, a synthetic model tool-choice benchmark (optional local 9Router model), and non-intrusive Kali live fence prerequisite diagnostics.
