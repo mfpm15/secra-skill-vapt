@@ -65,6 +65,18 @@ Do not use this check as the sole backup or evidence-retention policy. Full offl
 7. Inspect full-case integrity before finalizing reports; unresolved case-review failures must be disclosed.
 8. Never force a specific model. Preserve the user's provider, reasoning effort and local runtime settings.
 
+## Durable restart of the internal 9Router model loop
+
+The internal SECRA AgentLoop now resumes after an interrupted model/process session using the committed tool audit instead of starting with an empty history. It restores only a bounded, sanitized last tool summary and recognized synthetic demo service metadata; it does **not** retrieve raw target data or pretend all analyst reasoning was saved.
+
+- Already committed tool actions count toward the same maximum step budget across restarts.
+- Existing completed demo observations allow a new model to continue without redoing the initial scan.
+- Pending/incomplete audit records or a truncated audit window cause a fail-closed operator review, not automatic re-execution.
+- Process-only actions such as capability preflight, checkpoint and hypothesis proposal do not consume the main execution step budget.
+- AgentLoop is a separate internal path from OpenCode's direct MCP tool use. Full provider sessions, token usage and reasoning traces are not replayed by this change.
+
+Existing live tool approval, scope and kernel checks remain independent of this continuity feature.
+
 ## Benchmark design (not yet implemented as a live model harness)
 
 For comparing GPT-5.6 Thinker or other models, use identical isolated labs or official CTF environments, identical initial state, approved tools and time budgets, and independent grading. Report success against actual ground truth, evidence completeness, wrong-mode actions, rejected calls, model latency and repeat-work ratios. Current backend CI cannot prove general model superiority or real Kali live readiness.
