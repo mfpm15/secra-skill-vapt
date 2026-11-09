@@ -131,3 +131,37 @@ def test_all_global_agents_parse_as_valid_native_v2_frontmatter():
             assert isinstance(rule["action"], str)
             assert isinstance(rule["resource"], str)
         assert metadata["permissions"][0] == {"action": "*", "resource": "*", "effect": "deny"}
+
+
+def test_sensitive_paths_never_silently_allowed_in_v2_agents():
+    import fnmatch
+
+    def result(rules, action, resource):
+        effect = "ask"
+        for rule in rules:
+            if fnmatch.fnmatchcase(action, rule["action"]) and fnmatch.fnmatchcase(resource, rule["resource"]):
+                effect = rule["effect"]
+        return effect
+
+    for name in opencode_global.AGENTS:
+        document = opencode_global.agent_text(name, 2)
+        frontmatter = document.split("\n---\n", 1)[0][len("---\n"):]
+        rules = yaml.safe_load(frontmatter)["permissions"]
+        assert result(rules, "read", "project/src/main.py") == "allow", name
+        assert result(rules, "read", "project/.env") == "ask", name
+        assert result(rules, "read", "project/.env.staging") == "ask", name
+        assert result(rules, "read", "project/.env.example") == "allow", name
+        for sensitive in (
+            "/home/kali/.ssh/id_ed25519",
+            "/home/kali/.aws/credentials",
+            "/home/kali/.kube/config",
+            "project/private.key",
+            "project/server.pem",
+            "project/client.p12",
+            "project/client.pfx",
+            "/home/kali/.ssh/id_rsa",
+        ):
+            assert result(rules, "read", sensitive) == "deny", (name, sensitive)
+        assert result(rules, "grep", "password") == "ask", name
+        if name == "secra-vapt" or name not in {"secra-ctf"}:
+            assert result(rules, "shell", "cat .env") == "deny", name
