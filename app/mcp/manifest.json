@@ -301,6 +301,168 @@
           "task_id"
         ]
       }
+    },
+    {
+      "name": "artifact.sha256",
+      "description": "Compute real local SHA-256 from operator-supplied case artifact",
+      "risk": "R1",
+      "adapter": "local_artifact",
+      "mode": "both",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "artifact": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 140,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,139}$"
+          }
+        },
+        "required": [
+          "task_id",
+          "artifact"
+        ]
+      }
+    },
+    {
+      "name": "artifact.file_type",
+      "description": "Run system file MIME identification on a scoped local artifact",
+      "risk": "R1",
+      "adapter": "local_artifact",
+      "mode": "both",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "artifact": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 140,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,139}$"
+          }
+        },
+        "required": [
+          "task_id",
+          "artifact"
+        ]
+      }
+    },
+    {
+      "name": "artifact.strings",
+      "description": "Run system strings on a scoped local binary; seal raw text only",
+      "risk": "R1",
+      "adapter": "local_artifact",
+      "mode": "both",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "artifact": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 140,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,139}$"
+          }
+        },
+        "required": [
+          "task_id",
+          "artifact"
+        ]
+      }
+    },
+    {
+      "name": "artifact.elf_header",
+      "description": "Run readelf -h on a scoped local ELF; seal raw output",
+      "risk": "R1",
+      "adapter": "local_artifact",
+      "mode": "both",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "artifact": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 140,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,139}$"
+          }
+        },
+        "required": [
+          "task_id",
+          "artifact"
+        ]
+      }
+    },
+    {
+      "name": "artifact.object_summary",
+      "description": "Run objdump -f on a scoped local binary; seal raw output",
+      "risk": "R1",
+      "adapter": "local_artifact",
+      "mode": "both",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "artifact": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 140,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,139}$"
+          }
+        },
+        "required": [
+          "task_id",
+          "artifact"
+        ]
+      }
+    },
+    {
+      "name": "artifact.metadata",
+      "description": "Run exiftool -j on a scoped local artifact; seal raw output",
+      "risk": "R1",
+      "adapter": "local_artifact",
+      "mode": "both",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "artifact": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 140,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,139}$"
+          }
+        },
+        "required": [
+          "task_id",
+          "artifact"
+        ]
+      }
     }
   ]
 }
