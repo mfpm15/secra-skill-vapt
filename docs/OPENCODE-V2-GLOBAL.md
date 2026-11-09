@@ -136,6 +136,20 @@ Toolcheck hanya memeriksa PATH dan manifest, tidak menjalankan scan dan tidak me
 
 Untuk verifikasi eksekusi MCP, gunakan task demo/offline SECRA dengan UUID yang valid, lalu pastikan server benar-benar merespons `tools/list` dan tool demonstrasi. Unit dan integration tests sudah menguji protokol resmi; uji OpenCode terpasang di Kali tetap wajib.
 
+## 5a. Jalankan UI SECRA untuk mengisi scope secara lokal
+
+Buka **terminal Kali kedua**; tidak perlu pindah folder aktif:
+
+~~~bash
+SECRA_REPO="$HOME/.local/share/secra/repo"
+PYTHONPATH="$SECRA_REPO" \
+  "$SECRA_REPO/.venv/bin/python" -m app
+~~~
+
+Buka `http://127.0.0.1:8765`, masukkan token operator yang tercetak di terminal, isi target dan scope sendiri, centang konfirmasi otorisasi, dan buat task. UI akan menampilkan **task ID (UUID)**. Untuk uji pertama pilih **offline demo**. Kirim hanya task ID ini ke agent OpenCode, bukan target mentah jika memakai model eksternal.
+
+Untuk operasi real, backend tetap membutuhkan egress attestation yang independen. Mengisi scope bukan berarti semua tool live otomatis diaktifkan.
+
 ## 6. Scope selalu diisi operator, bukan hardcoded
 
 Agent `secra-vapt` akan meminta Anda mengisi engagement melalui UI SECRA lokal:
