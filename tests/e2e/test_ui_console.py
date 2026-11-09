@@ -221,3 +221,15 @@ def test_local_operator_can_manage_versioned_leads_without_network(tmp_path, mon
     assert handoff.json()["lead_registry"]["negative_count"] == 1
     assert "Header control review" not in handoff.text
     assert "127.0.0.1" not in handoff.text
+
+
+def test_hypothesis_board_is_present_and_uses_safe_dom_methods(tmp_path, monkeypatch):
+    client, _ = build_client(tmp_path, monkeypatch)
+    html = client.get("/").text
+    for identifier in ("leads-heading", "lead-title", "lead-category",
+                       "lead-add", "lead-refresh", "lead-list"):
+        assert 'id="' + identifier + '"' in html
+    assert "LEAD_NEXT" in html
+    assert "expected_version:item.version" in html
+    assert "pane.append(card)" in html
+    assert "innerHTML=" not in html
