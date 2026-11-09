@@ -97,3 +97,20 @@ def test_agent_old_primaries_remain_compatible_but_not_required():
     assert {"secra", "secra-vapt", "secra-bounty", "secra-ctf"}.issubset(
         set(opencode_global.AGENTS))
     assert opencode_global.AGENTS[0] == "secra"
+
+
+def test_unmanaged_global_secra_profile_cannot_receive_managed_launcher(tmp_path):
+    config = tmp_path / "config"
+    (config / "agents").mkdir(parents=True)
+    existing = config / "agents" / "secra.md"
+    existing.write_text("---\nmode: primary\n---\n\n# operator-owned\n")
+    launcher = tmp_path / "bin"
+    run = installer(
+        "install", "--major", "2", "--config-dir", config,
+        "--learning-dir", tmp_path / "learning",
+        "--launcher-dir", launcher, "--with-launcher", "--replace"
+    )
+    assert run.returncode != 0
+    assert "not installed and verified" in run.stderr
+    assert "operator-owned" in existing.read_text()
+    assert not (launcher / "secra").exists()
