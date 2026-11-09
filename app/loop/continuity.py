@@ -11,6 +11,7 @@ from collections import Counter
 from hashlib import sha256
 
 from .store import TaskStore
+from .leads import LeadRegistry
 
 MAX_RUNS = 200
 MAX_HANDOFF_RUNS = 25
@@ -54,6 +55,7 @@ def build_handoff(store: TaskStore, task_id: str) -> dict:
     # Mark coverage uncertain rather than calling those tool operations zero.
     uninstrumented_events = max(0, len(audited_tool_events) - len(runs))
     recorded_refs = [r["output_ref"] for r in successful if r["output_ref"]]
+    registry = LeadRegistry(store).summary(task_id)
 
     # Private target/scope are intentionally ignored; a boolean is sufficient.
     result = {
@@ -99,8 +101,10 @@ def build_handoff(store: TaskStore, task_id: str) -> dict:
         ],
         "do_not_repeat_without_new_reason": sorted({r["tool"] for r in failed}),
         "evidence_refs_count": len(recorded_refs),
+        "lead_registry": registry,
+        # Agent/receipt-only claims are never promoted to verified facts.
         "verified_facts": [],
-        "unverified_hypotheses": [],
+        "unverified_hypotheses": registry["active"],
         "cleanup": {"verified": False, "operator_review_required": True},
         "handoff": {
             "proven_by_log": "Only reviewed tool invocations and their receipts, not findings.",
@@ -108,7 +112,7 @@ def build_handoff(store: TaskStore, task_id: str) -> dict:
             "missing": [
                 "Independent verification of suspected findings",
                 "Review incomplete historical tool audit" if uninstrumented_events or events_truncated else "No legacy tool-audit gaps detected in event window",
-                "Explicit hypothesis/negative-lead notes",
+                "Review operator-owned lead records and negative hypotheses",
                 "Cleanup proof and operator sign-off",
             ],
         },
