@@ -48,6 +48,20 @@ FIRST_PARTY = (
     ("skills/privesc", "secra-agent-privesc", "Review potential privilege-boundary weaknesses without unsanctioned escalation."),
     ("skills/reporting", "secra-agent-reporting", "Summarize authorized assessment evidence and limitations."),
     ("skills/continuity", "secra-agent-continuity", "Preserve audited state, evidence references and concise inter-model handoff checkpoints."),
+    ("knowledge/skills/bug-bounty-program-rules", "secra-bug-bounty-program-rules", "Review in-scope program assets, forbidden methods and safe testing policy."),
+    ("knowledge/skills/attack-surface-planning", "secra-attack-surface-planning", "Prioritize observed scope-controlled attack surfaces by business impact and evidence."),
+    ("knowledge/skills/api-object-authorization", "secra-api-object-authorization", "Evaluate BOLA/BOPLA with approved role and object matrices."),
+    ("knowledge/skills/graphql-api-contracts", "secra-graphql-api-contracts", "Review GraphQL resolver authorization and safe complexity controls."),
+    ("knowledge/skills/web-business-logic", "secra-web-business-logic", "Analyze transaction invariants and misuse scenarios with controlled test identities."),
+    ("knowledge/skills/web-input-validation", "secra-web-input-validation", "Review XSS/SQLi and other input-output trust boundaries with counterchecks."),
+    ("knowledge/skills/cloud-and-kubernetes", "secra-cloud-and-kubernetes", "Review cloud IAM and Kubernetes role/security configuration evidence."),
+    ("knowledge/skills/active-directory-identity", "secra-active-directory-identity", "Analyze authorized directory identity and delegation boundaries."),
+    ("knowledge/skills/mobile-reverse-engineering", "secra-mobile-reverse-engineering", "Review local Android/iOS artifacts under MASVS and MASTG."),
+    ("knowledge/skills/ctf-artifact-triage", "secra-ctf-artifact-triage", "Route challenge artifacts to reproducible offline CTF analysis."),
+    ("knowledge/skills/forensic-evidence-handling", "secra-forensic-evidence-handling", "Preserve evidence provenance and event-time accuracy in forensic work."),
+    ("knowledge/skills/supply-chain-code-security", "secra-supply-chain-code-security", "Review dependency, build, CI and code supply-chain trust."),
+    ("knowledge/skills/executive-evidence-storytelling", "secra-executive-evidence-storytelling", "Build evidence-linked executive summaries and event-by-event report narratives."),
+    ("knowledge/skills/secure-agent-toolboundaries", "secra-secure-agent-toolboundaries", "Audit OpenCode agent permissions, MCP policy and untrusted skill boundaries."),
 )
 
 # Only these specific locations are eligible for optional external installation.
