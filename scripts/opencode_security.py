@@ -248,21 +248,28 @@ def main() -> int:
     try:
         if args.command == "verify":
             return verify(destination)
+        # Validate all trust-gate arguments before installing even one file.
+        if args.with_external and not args.reviewed_external:
+            raise ValueError("External skills require --reviewed-external after manual source review")
+        if args.with_external and args.external_root is None:
+            raise ValueError("--external-root is required with --with-external")
         current = existing_receipt(destination)
         changes = 0
         for source, skill_id, description, origin, refs in discover(args):
             files = build_skill(source, skill_id, description, origin, refs)
             result = install_one(destination, skill_id, files, args.replace, args.dry_run)
             print(result)
-            if result.startswith("INSTALLED: "):
-                changes += 1
-                current["skills"][skill_id] = json.loads(files[".secra-origin.json"].decode())
+            if result.startswith(("INSTALLED: ", "UNCHANGED: ")):
+                entry = json.loads(files[".secra-origin.json"].decode())
+                if current["skills"].get(skill_id) != entry or result.startswith("INSTALLED: "):
+                    changes += 1
+                current["skills"][skill_id] = entry
         if not args.dry_run and changes:
             receipt_path(destination).write_text(
                 json.dumps(current, indent=2, sort_keys=True) + "\n", encoding="utf-8"
             )
             print("Receipt:", receipt_path(destination))
-        if not args.dry_run:
+        if not args.dry_run and args.destination is None:
             learning = ROOT / ".local" / "secra-learning"
             (learning / "inbox").mkdir(mode=0o700, parents=True, exist_ok=True)
             (learning / "reviewed").mkdir(mode=0o700, parents=True, exist_ok=True)
