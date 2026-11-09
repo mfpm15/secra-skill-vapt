@@ -20,6 +20,11 @@ from app.workspace import WorkspaceManager, WorkspaceError
 STATUSES = frozenset({"created", "running", "completed", "exhausted",
                       "failed", "stopped", "refused", "awaiting_approval"})
 
+# Hard backend call ceilings prevent unbounded direct OpenCode MCP loops.
+# AgentLoop has a smaller independent 25-step budget.
+MAX_TASK_TOOL_CALLS = 2000
+MAX_TASK_SAME_TOOL_CALLS = 400
+
 
 class TaskError(ValueError):
     pass
@@ -207,6 +212,19 @@ class TaskStore:
         if not isinstance(tool, str) or not re.fullmatch(r"[A-Za-z0-9_.-]{1,80}", tool):
             raise TaskError("TOOL_AUDIT_NAME_INVALID")
         with self._db() as db:
+            # Atomic reservation across independent MCP processes/sessions.
+            # Model prompt instructions cannot override these limits.
+            db.execute("BEGIN IMMEDIATE")
+            total = db.execute(
+                "SELECT COUNT(*) FROM tool_runs WHERE task_id=?", (tid,)
+            ).fetchone()[0]
+            per_tool = db.execute(
+                "SELECT COUNT(*) FROM tool_runs WHERE task_id=? AND tool=?",
+                (tid, tool)).fetchone()[0]
+            if total >= MAX_TASK_TOOL_CALLS:
+                raise TaskError("TASK_TOOL_CALL_BUDGET_EXCEEDED")
+            if per_tool >= MAX_TASK_SAME_TOOL_CALLS:
+                raise TaskError("TASK_SAME_TOOL_CALL_BUDGET_EXCEEDED")
             cursor = db.execute(
                 "INSERT INTO tool_runs(task_id,tool,started_at,status) VALUES(?,?,?,?)",
                 (tid, tool, self.utc_now(), "requested"))
