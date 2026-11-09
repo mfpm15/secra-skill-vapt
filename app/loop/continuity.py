@@ -25,7 +25,10 @@ def build_handoff(store: TaskStore, task_id: str) -> dict:
     reported as unavailable rather than retroactively inventing timestamps.
     """
     task = store.require(task_id)
-    runs = store.tool_runs(task_id, limit=MAX_RUNS)
+    # The export itself is an audited read-only tool. Exclude its own rows:
+    # including a half-finished export would falsely report unfinished work.
+    runs = [r for r in store.tool_runs(task_id, limit=MAX_RUNS)
+            if r["tool"] != "workflow.handoff"]
     events = []
     cursor = 0
     for _ in range(10):
