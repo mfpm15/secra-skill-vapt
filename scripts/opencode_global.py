@@ -25,6 +25,20 @@ AGENTS = (
     "secra-verifier", "secra-reporter", "secra-ctf-web",
     "secra-ctf-pwn", "secra-ctf-reverse", "secra-ctf-crypto",
     "secra-ctf-forensics",
+    "secra-bounty",
+    "secra-bounty-scope",
+    "secra-auth",
+    "secra-business-logic",
+    "secra-graphql",
+    "secra-cloud",
+    "secra-kubernetes",
+    "secra-mobile",
+    "secra-ad-identity",
+    "secra-forensics",
+    "secra-supply-chain",
+    "secra-executive",
+    "secra-ctf-misc",
+    "secra-ctf-mobile",
 )
 RECEIPT = ".secra-global-agents.json"
 
@@ -52,7 +66,7 @@ def agent_text(agent_name: str, major: int) -> str:
         if agent_name == "secra-vapt"
         else "CTF challenge assistant for isolated, authorized labs."
     )
-    bash_effect = "deny" if agent_name == "secra-vapt" else "ask"
+    bash_effect = "ask" if agent_name == "secra-ctf" else "deny"
     # Avoid mixed V1 and V2 frontmatter fields. Generate each natively.
     if major == 1:
         frontmatter = (
@@ -165,7 +179,7 @@ def agents_install(destination: Path, major: int, replace: bool, dry_run: bool) 
 def agents_verify(destination: Path) -> None:
     receipt = safe_receipt(destination / RECEIPT)
     if set(receipt["agents"]) != set(AGENTS):
-        raise ValueError("Expected two managed global agents")
+        raise ValueError("Expected all managed global SECRA agents")
     for name, entry in receipt["agents"].items():
         path = destination / "agents" / (name + ".md")
         if not path.is_file() or path.is_symlink():

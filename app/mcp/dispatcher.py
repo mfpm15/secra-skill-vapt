@@ -140,6 +140,25 @@ class ToolDispatcher:
                 result = receipt("completed", 0, short_handoff(snapshot), reference)
                 self.store.append(tid, "tool", name, "done", result["summary"], reference)
                 return result
+            if tool.adapter == "local_artifact":
+                from app.mcp.local_artifacts import inspect
+                raw, safe_summary = inspect(self.root, tid, name, args["artifact"])
+                if not isinstance(raw, bytes) or not 0 < len(raw) <= 6291456:
+                    raise RuntimeError("ARTIFACT_OUTPUT_LIMIT")
+                eid, rid = uuid.UUID(tid), uuid.uuid4()
+                writer = self.vault.begin(eid, rid)
+                try:
+                    for offset in range(0, len(raw), 65536):
+                        writer.append("stdout", raw[offset:offset + 65536])
+                    writer.finish()
+                except BaseException:
+                    writer.abort()
+                    raise
+                reference = "evidence://" + tid + "/" + str(rid)
+                result = receipt("completed", 0, safe_summary, reference)
+                self.store.append(tid, "tool", name, "done",
+                                  result["summary"], reference)
+                return result
             if tool.adapter in {"gateway_nmap", "gateway_curl"}:
                 return self._live(task, tool, args, cancelled)
             if tool.adapter == "loopback_head":

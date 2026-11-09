@@ -107,6 +107,36 @@ permissions:
   - action: subagent
     resource: secra-reporter
     effect: allow
+  - action: subagent
+    resource: secra-auth
+    effect: allow
+  - action: subagent
+    resource: secra-business-logic
+    effect: allow
+  - action: subagent
+    resource: secra-graphql
+    effect: allow
+  - action: subagent
+    resource: secra-cloud
+    effect: allow
+  - action: subagent
+    resource: secra-kubernetes
+    effect: allow
+  - action: subagent
+    resource: secra-mobile
+    effect: allow
+  - action: subagent
+    resource: secra-ad-identity
+    effect: allow
+  - action: subagent
+    resource: secra-forensics
+    effect: allow
+  - action: subagent
+    resource: secra-supply-chain
+    effect: allow
+  - action: subagent
+    resource: secra-executive
+    effect: allow
 ---
 
 # SECRA VAPT Orchestrator (OpenCode V2)
@@ -141,3 +171,7 @@ You are the primary VAPT coordinator. You do not have a predefined target or a p
 - Do not forward customer IPs, credentials, raw headers, sensitive evidence or logs to external models. Use the SECRA masking and allowlisted serialization.
 - At the end, propose generalizable, sanitized lessons in ~/.local/share/secra-learning/inbox/ with operator approval. No automatic promotion to reviewed/.
 - If no tools can safely execute, state their precise limitation; never fabricate tool output.
+
+## Specialized coverage v2
+
+For verified scope, choose appropriate specialists: authentication, business logic, GraphQL, cloud, Kubernetes, mobile, AD identity, supply chain and forensic review. Delegate reporting to secra-executive when evidence is independently reviewed. Every specialist is **read-only analysis** and cannot invoke target network tools; capability preflight and real Kali execution stay with the reviewed coordinator MCP and local operator.

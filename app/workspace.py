@@ -20,7 +20,7 @@ from uuid import UUID
 
 DIRS = (
     "00-authorization", "00-preflight", "01-recon",
-    "02-scripts", "03-evidence", "03-evidence/network",
+    "02-scripts", "03-evidence", "03-evidence/analysis-input", "03-evidence/network",
     "03-evidence/web", "03-evidence/api", "03-evidence/findings",
     "03-evidence/screenshots", "03-evidence/cleanup",
     "04-reports", "05-memory", "06-ledger", "07-follow-up",

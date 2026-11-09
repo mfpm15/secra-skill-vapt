@@ -32,6 +32,14 @@ def inspect_capabilities(store: TaskStore, manifest: ToolManifest, task_id: str)
             # Never report live readiness without independently attesting the
             # actual kernel fence, binary digest, and operator scope at call time.
             capability, reason = "gated", "kernel_fence_scope_binary_attestation_required"
+        elif tool.adapter == "local_artifact":
+            from app.mcp.local_artifacts import is_available
+            if state != "running" or task["stop"]:
+                capability, reason = "blocked", "task_not_running"
+            elif is_available(tool.name):
+                capability, reason = "local_only", "real_artifact_binary_available_no_network"
+            else:
+                capability, reason = "blocked", "local_binary_missing_or_untrusted"
         elif tool.adapter == "loopback_head":
             if mode != "local":
                 capability, reason = "blocked", "loopback_only"

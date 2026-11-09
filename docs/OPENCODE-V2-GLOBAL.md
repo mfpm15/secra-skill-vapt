@@ -195,7 +195,7 @@ Agent `secra-vapt` akan meminta Anda mengisi engagement melalui UI SECRA lokal:
 
 ## Model handoff v0.3 (new)
 
-The globally installed `secra-agent-continuity` skill guides periodic checkpoints before model changes or at task completion. SECRA MCP now advertises **12 reviewed tools** including the read-only `workflow.handoff`. A checkpoint seals metadata-only tool receipts; it does not certify findings or authorize more network tools.
+The globally installed `secra-agent-continuity` skill guides periodic checkpoints before model changes or at task completion. SECRA MCP now advertises **18 reviewed tools** including the read-only `workflow.handoff`. A checkpoint seals metadata-only tool receipts; it does not certify findings or authorize more network tools.
 
 ~~~bash
 REPO="$HOME/.local/share/secra/repo"

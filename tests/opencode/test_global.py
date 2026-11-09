@@ -21,7 +21,7 @@ def invoke(*args):
 
 
 def test_all_v2_native_agent_profiles_exist():
-    assert len(opencode_global.AGENTS) == 13
+    assert len(opencode_global.AGENTS) == 27
     for name in opencode_global.AGENTS:
         content = opencode_global.agent_text(name, 2)
         assert content.startswith("---\n")
@@ -35,6 +35,8 @@ def test_all_v2_native_agent_profiles_exist():
             assert "  - action: execute" not in content
         if name == "secra-ctf":
             assert '  - action: shell\n    resource: "*"\n    effect: ask' in content
+            assert '  - action: secra_artifact_*\n    resource: "*"\n    effect: ask' in content
+            assert '  - action: secra_workflow_capabilities\n    resource: "*"\n    effect: allow' in content
 
 
 def test_global_install_from_arbitrary_directory(tmp_path):
@@ -42,8 +44,8 @@ def test_global_install_from_arbitrary_directory(tmp_path):
     learning = tmp_path / "learning"
     result = invoke("install", "--major", "2", "--config-dir", config, "--learning-dir", learning)
     assert result.returncode == 0, result.stderr
-    assert len(list((config / "agents").glob("*.md"))) == 13
-    assert len(list((config / "skills").glob("*/SKILL.md"))) == 21
+    assert len(list((config / "agents").glob("*.md"))) == 27
+    assert len(list((config / "skills").glob("*/SKILL.md"))) == 35
     assert (learning / "inbox").is_dir()
     assert (learning / "reviewed").is_dir()
     assert invoke("verify", "--major", "2", "--config-dir", config, "--learning-dir", learning).returncode == 0

@@ -25,7 +25,7 @@ def test_project_install_and_verify_in_scratch_directory(tmp_path):
     result = run_cli("install", "--destination", str(destination))
     assert result.returncode == 0, result.stderr
     receipt = json.loads((destination / installer.MANIFEST_NAME).read_text())
-    assert len(receipt["skills"]) == 21
+    assert len(receipt["skills"]) == 35
     for skill_id in receipt["skills"]:
         path = destination / skill_id / "SKILL.md"
         assert path.is_file()
