@@ -10,6 +10,39 @@ Referensi resmi:
 - https://opencode.ai/docs/permissions/
 - https://opencode.ai/docs/mcp-servers/
 
+
+## Upgrade instalasi yang sudah ada (OpenCode 2.2.5)
+
+Jika Anda sudah memasang 34 skill dan 13 agent sebelumnya, jangan jalankan clone baru atau menghapus config global.
+
+**Perhatian:** installer mungkin sebelumnya memiliki perbaikan lokal satu baris untuk lokasi Semgrep. Jalankan `git diff -- scripts/opencode_security.py` dari repo dan periksa hasilnya. **Hanya bila diff benar-benar menunjukkan perubahan path** `plugins/static-analysis/skills/static-analysis` menjadi `plugins/static-analysis/skills/semgrep`, aman untuk menggunakan `git restore -- scripts/opencode_security.py` karena patch identik sudah tersedia di main upstream. Bila ada perubahan lain, simpan dan rekonsiliasi perubahan tersebut terlebih dahulu; jangan memaksa pull.
+
+~~~bash
+REPO="$HOME/.local/share/secra/repo"
+git -C "$REPO" status --short
+git -C "$REPO" diff -- scripts/opencode_security.py
+# REVIEW DIFF TERLEBIH DAHULU. Jika HANYA fix Semgrep yang sudah ada di upstream:
+git -C "$REPO" restore -- scripts/opencode_security.py
+git -C "$REPO" pull --ff-only
+
+# Upgrade hanya file global yang sebelumnya dikelola SECRA:
+python3 "$REPO/scripts/opencode_global.py" install --major 2 --replace
+
+# Jika skill eksternal 14 sudah direview dan source masih tersedia:
+python3 "$REPO/scripts/opencode_global.py" install --major 2 --replace \
+  --with-external \
+  --external-root "$HOME/.local/share/secra/sources" \
+  --reviewed-external
+
+python3 "$REPO/scripts/opencode_global.py" verify --major 2
+~~~
+
+Installer membuat backup saat memperbarui agent terkelola. Jika file agent telah dimodifikasi manual sejak pemasangan, installer melewatinya dan tidak memaksakan overwrite. Pemeriksaan permission perlu diulang melalui konfigurasi efektif OpenCode, karena aturan lokal/global di luar SECRA bisa memengaruhinya.
+
+**Perbaikan keamanan OpenCode v2:** seluruh agent SECRA sekarang tetap meminta persetujuan untuk membaca file `*.env` dan `*.env.*` (kecuali `*.env.example`), menolak beberapa format credential dan private key yang dikenal, meminta izin sebelum membaca file konfigurasi provider OpenCode, dan meminta izin untuk `grep` agar output pencarian tidak secara diam-diam mengandung secrets. Ini bukan pemeriksaan DLP universal; file teks dengan nama lain tetap dapat berisi rahasia.
+
+**Keterbatasan Semgrep:** importer hanya memasang dokumen `SKILL.md` serta referensi; workflow resmi upstream mengandalkan script yang tidak disalin. Skill tersebut tetap pengetahuan/referensi, bukan bukti bahwa scanner telah dijalankan.
+
 ## 1. Persiapan user biasa
 
 Gunakan akun Kali biasa, tidak perlu sudo saat menginstal global user-level skills. Pastikan OpenCode v2 tersedia:
