@@ -112,6 +112,17 @@ class ToolDispatcher:
                 result = receipt("completed", 0, short_capabilities(report))
                 self.store.append(tid, "tool", name, "done", result["summary"])
                 return result
+            if tool.adapter == "sapper_initialize":
+                from app.sapper_integration import initialize_graph
+                anchor_id = initialize_graph(tid, self.root)
+                summary = (
+                    "Sapper-v2 authorized local task graph initialized; "
+                    "sanitized root fact " + anchor_id
+                    + ". No target operation or worker spawned."
+                )
+                result = receipt("completed", 0, summary)
+                self.store.append(tid, "tool", name, "done", result["summary"])
+                return result
             if tool.adapter == "sapper_frontier":
                 from app.sapper_integration import resolve_frontier, public_graph
                 frontier = resolve_frontier(tid, self.root)
