@@ -63,6 +63,16 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <button id="workspace-handoff" type="button">Handoff checkpoint</button>
 </div>
 <pre class="entry" id="workspace-output" style="white-space:pre-wrap;font-size:12px;max-height:310px;overflow:auto" aria-live="polite">Start or select a task to inspect its private workspace.</pre>
+</section>
+<section class="panel" style="margin-top:22px" aria-labelledby="leads-heading">
+<h2 id="leads-heading">Hypothesis &amp; verification board</h2>
+<p class="sub" style="margin-bottom:14px">Operator-owned work items are kept across model switches. Record sanitized hypothesis titles only—no customer addresses, credentials or payloads. A verified status requires operator sign-off and two distinct sealed real observation receipts.</p>
+<div style="display:grid;grid-template-columns:minmax(130px,180px) 1fr;gap:10px">
+<select id="lead-category" aria-label="Hypothesis category"><option value="web">Web</option><option value="api">API</option><option value="auth">Authentication</option><option value="network">Network</option><option value="tls">TLS</option><option value="code">Code</option><option value="mobile">Mobile</option><option value="other">Other</option></select>
+<input id="lead-title" aria-label="Sanitized hypothesis title" maxlength="120" placeholder="Short sanitized hypothesis title">
+</div>
+<div class="actions"><button id="lead-add" type="button" class="primary">Add hypothesis</button><button id="lead-refresh" type="button">Refresh board</button></div>
+<div id="lead-list" aria-live="polite" style="margin-top:16px"><span class="muted">Select an authorized task to manage hypotheses.</span></div>
 </section></main>
 <script>
 "use strict";
@@ -141,6 +151,75 @@ $("workspace-refresh").onclick=()=>workspaceAction("status");
 $("workspace-manifest").onclick=()=>workspaceAction("manifest");
 $("workspace-verify").onclick=()=>workspaceAction("verify");
 $("workspace-handoff").onclick=()=>workspaceAction("handoff");
+const LEAD_NEXT={
+ "open":["testing","negative"],"testing":["open","negative","review_requested"],
+ "negative":["testing"],"review_requested":["testing","verified","rejected"],
+ "verified":["closed"],"rejected":["testing","closed"],"closed":[]
+};
+const LEAD_REASON={
+ "open":"further_analysis","testing":"started","negative":"no_effect",
+ "review_requested":"evidence_captured","verified":"operator_signoff",
+ "rejected":"false_positive","closed":"remediated"
+};
+function dom(tag,kind,text){
+ const el=document.createElement(tag);
+ if(kind)el.className=kind;
+ if(text!==undefined)el.textContent=text;
+ return el;
+}
+async function refreshLeads(){
+ const pane=$("lead-list");pane.replaceChildren();
+ if(!task){pane.textContent="Create an authorized task first.";return;}
+ try{
+  const rows=await api("/api/tasks/"+encodeURIComponent(task)+"/leads");
+  if(!rows.length){pane.append(dom("div","muted","No hypotheses recorded for this task."));return;}
+  const counts={};for(const item of rows)counts[item.status]=(counts[item.status]||0)+1;
+  pane.append(dom("p","muted",rows.length+" hypotheses · "+JSON.stringify(counts)));
+  for(const item of rows){
+   const card=dom("div","entry");card.style.marginBottom="10px";
+   card.append(dom("div","label",item.category+" · "+item.title));
+   card.append(dom("div","meta",item.status+" · v"+item.version+" · "+item.id.slice(0,8)));
+   if(LEAD_NEXT[item.status].length){
+    const controls=dom("div","actions");
+    const target=dom("select");target.setAttribute("aria-label","Next hypothesis state");
+    for(const option of LEAD_NEXT[item.status]){
+     const opt=dom("option",null,option);opt.value=option;target.append(opt);
+    }
+    const reason=dom("select");reason.setAttribute("aria-label","Reason code");
+    const reasons=["started","no_effect","cannot_reproduce","evidence_captured",
+      "further_analysis","false_positive","operator_signoff","retest_needed",
+      "reopened","remediated","not_applicable"];
+    for(const option of reasons){const opt=dom("option",null,option);opt.value=option;reason.append(opt);}
+    const updateReason=()=>reason.value=LEAD_REASON[target.value]||"further_analysis";
+    target.onchange=updateReason;updateReason();
+    const evidence=dom("input");evidence.placeholder="evidence:// reference if required";
+    evidence.setAttribute("aria-label","Sealed evidence reference");evidence.style.maxWidth="250px";
+    const save=dom("button",null,"Update state");
+    save.onclick=async()=>{
+     try{
+      const body={next_status:target.value,reason:reason.value,
+                  expected_version:item.version};
+      if(evidence.value.trim())body.evidence_ref=evidence.value.trim();
+      await api("/api/tasks/"+encodeURIComponent(task)+"/leads/"+
+                encodeURIComponent(item.id)+"/transition","POST",body);
+      await refreshLeads();await workspaceAction("handoff");
+     }catch(e){$("workspace-output").textContent="Lead update: "+String(e.message);}
+    };
+    controls.append(target,reason,evidence,save);card.append(controls);
+   }
+   pane.append(card);
+  }
+ }catch(e){pane.textContent="Lead registry unavailable: "+String(e.message);}
+}
+$("lead-refresh").onclick=()=>refreshLeads();
+$("lead-add").onclick=async()=>{
+ if(!task){$("lead-list").textContent="Create an authorized task first.";return;}
+ try{
+  await api("/api/tasks/"+encodeURIComponent(task)+"/leads","POST",
+            {category:ctl("lead-category"),title:ctl("lead-title")});
+  $("lead-title").value="";await refreshLeads();
+ }catch(e){$("lead-list").textContent="Lead creation: "+String(e.message);}
+};
 $("start").onclick=async()=>{
  try{
   $("start").disabled=true;runSerial++;lastSeq=0;$("timeline").replaceChildren();
@@ -148,6 +227,7 @@ $("start").onclick=async()=>{
   const created=await api("/api/tasks","POST",form);
   task=created.id;$("task-id").textContent=task.slice(0,8);$("stop").disabled=false;
   await workspaceAction("status");
+  await refreshLeads();
   await api("/api/tasks/"+encodeURIComponent(task)+"/start","POST",{});
   badge("running");await stream(task,runSerial);
  }catch(e){badge("Error");$("notice").textContent=e.message;}finally{$("start").disabled=false;}
