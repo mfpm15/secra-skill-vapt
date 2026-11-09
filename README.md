@@ -38,6 +38,16 @@ The agent loop is bounded to **25 tool steps and 20 minutes**; a stopped, refuse
 
 For regression testing install `requirements-dev.txt` and run `python -m pytest tests/e2e -q -ra` and `python -m pytest -m "not lab" -q`. Privileged `tests/fence/ -m lab` requires an independently provisioned Kali VM; no lab proofs have been provided.
 
+## Audited process continuity (v0.3 preview)
+
+SECRA records each valid MCP invocation in a local UTC-started audit row **before dispatch**, then records its completion status, elapsed milliseconds and sealed evidence reference. No argv, real target or raw tool output is placed into the continuity record. Read-only MCP `workflow.handoff` (R0; both modes) creates a local AES-GCM-sealed, privacy-minimized checkpoint even after a task ends; the model receives only a short summary and an `evidence://` reference.
+
+- Local operator endpoint: authenticated `GET /api/tasks/{task_id}/handoff`.
+- Offline CLI from any working directory: `python3 /path/to/secra/scripts/secra_handoff.py --task-id UUID --data-dir /path/to/secra/data --output /private/HANDOFF.md` (creates file mode 0600).
+- Global skill `secra-agent-continuity` describes checkpoint discipline and how to treat unknown facts.
+
+This does **not** claim independently verified findings, TTFV, model fidelity or automatic cleanup. Legacy tasks with no process-audit rows are identified as unmeasured. See [docs/PROCESS-CONTINUITY.md](docs/PROCESS-CONTINUITY.md).
+
 ## OpenCode V2 global installation (Kali Linux)
 
 **Recommended:** install native OpenCode V2 skills and 13 agent profiles globally under `~/.config/opencode/`. Use `secra-vapt` and `secra-ctf` from **any working directory**; the repository checkout is needed only for installation and the optional MCP backend. Operators configure each engagement's authorized target/scope inside the local SECRA UI, not through hardcoded agent settings.
@@ -63,7 +73,7 @@ python3 scripts/opencode_security.py verify --scope project
 opencode --agent secra-vapt
 ~~~
 
-This installs **20 SECRA-authored skill references**. Another **14 allowlisted references** from Claude-Red, CTF Skills and Trail of Bits can be installed only after separate checkout/review and explicit opt-in. Third-party scripts and executable files are never copied. OpenCode skills do **not** bypass SECRA's approval, data-minimization or Kali kernel egress gates; live target operations remain unavailable until the independent attestation is satisfied.
+This installs **21 SECRA-authored skill references**. Another **14 allowlisted references** from Claude-Red, CTF Skills and Trail of Bits can be installed only after separate checkout/review and explicit opt-in. Third-party scripts and executable files are never copied. OpenCode skills do **not** bypass SECRA's approval, data-minimization or Kali kernel egress gates; live target operations remain unavailable until the independent attestation is satisfied.
 
 ## Quick start on Kali Linux or Linux
 
