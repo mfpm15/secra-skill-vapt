@@ -11,6 +11,7 @@ from collections import Counter
 from hashlib import sha256
 
 from .store import TaskStore
+from .leads import LeadRegistry
 
 MAX_RUNS = 200
 MAX_HANDOFF_RUNS = 25
@@ -54,6 +55,7 @@ def build_handoff(store: TaskStore, task_id: str) -> dict:
     # Mark coverage uncertain rather than calling those tool operations zero.
     uninstrumented_events = max(0, len(audited_tool_events) - len(runs))
     recorded_refs = [r["output_ref"] for r in successful if r["output_ref"]]
+    registry = LeadRegistry(store).summary(task_id)
 
     # Private target/scope are intentionally ignored; a boolean is sufficient.
     result = {
@@ -99,8 +101,10 @@ def build_handoff(store: TaskStore, task_id: str) -> dict:
         ],
         "do_not_repeat_without_new_reason": sorted({r["tool"] for r in failed}),
         "evidence_refs_count": len(recorded_refs),
+        "lead_registry": registry,
+        # Agent/receipt-only claims are never promoted to verified facts.
         "verified_facts": [],
-        "unverified_hypotheses": [],
+        "unverified_hypotheses": registry["active"],
         "cleanup": {"verified": False, "operator_review_required": True},
         "handoff": {
             "proven_by_log": "Only reviewed tool invocations and their receipts, not findings.",
@@ -108,7 +112,7 @@ def build_handoff(store: TaskStore, task_id: str) -> dict:
             "missing": [
                 "Independent verification of suspected findings",
                 "Review incomplete historical tool audit" if uninstrumented_events or events_truncated else "No legacy tool-audit gaps detected in event window",
-                "Explicit hypothesis/negative-lead notes",
+                "Review operator-owned lead records and negative hypotheses",
                 "Cleanup proof and operator sign-off",
             ],
         },
@@ -123,13 +127,32 @@ def build_handoff(store: TaskStore, task_id: str) -> dict:
 
 
 def short_handoff(snapshot: dict) -> str:
-    """Compact <500-character safe feedback for a remote model."""
+    """Compact, safe feedback for a remote model; never exposes lead titles.
+
+    The encrypted snapshot contains full process metadata, but MCP callers
+    cannot decrypt that evidence through model tools. Include enough status
+    and opaque IDs in this summary to avoid forgetting unfinished work.
+    """
     m = snapshot["metrics"]
+    registry = snapshot.get("lead_registry", {})
+    counts = registry.get("counts", {})
+    active = registry.get("active", [])
+    next_lead = (
+        " Next lead: " + active[0]["lead_id"] +
+        " (" + active[0]["category"] + "/" + active[0]["status"] + ")."
+        if active else " No active leads recorded."
+    )
     return (
         "SECRA checkpoint: " + snapshot["task_status"] + "; "
         + str(m["tool_invocations_in_window"]) + " audited calls, "
-        + str(m["successful_receipts"]) + " successful receipts, "
-        + str(m["blocked_or_denied_receipts"]) + " denied/blocked; "
-        + str(m["incomplete_audit_records"]) + " unfinished records. "
-        + "No findings verified by checkpoint. Snapshot sealed locally."
-    )
+        + str(m["successful_receipts"]) + " successful, "
+        + str(m["blocked_or_denied_receipts"]) + " denied/blocked, "
+        + str(m["incomplete_audit_records"]) + " unfinished. "
+        + "Leads: " + str(counts.get("open", 0)) + " open, "
+        + str(counts.get("testing", 0)) + " testing, "
+        + str(counts.get("review_requested", 0)) + " awaiting review, "
+        + str(counts.get("negative", 0)) + " negative, "
+        + str(counts.get("verified", 0)) + " operator signed. "
+        + "No findings verified by checkpoint."
+        + next_lead
+    )[:490]

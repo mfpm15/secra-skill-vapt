@@ -38,6 +38,12 @@ The agent loop is bounded to **25 tool steps and 20 minutes**; a stopped, refuse
 
 For regression testing install `requirements-dev.txt` and run `python -m pytest tests/e2e -q -ra` and `python -m pytest -m "not lab" -q`. Privileged `tests/fence/ -m lab` requires an independently provisioned Kali VM; no lab proofs have been provided.
 
+## Versioned operator lead registry (v0.4 preview)
+
+The localhost console now includes a **Hypothesis & verification board**. Short sanitized hypotheses, active/negative review states, reason-coded transitions, and immutable UTC history persist in SQLite across OpenCode model/context switches. The model receives only safe lead IDs/statuses and evidence references in `workflow.handoff`, never raw titles or targets. Stale updates are rejected by version checks; promotion to `verified` requires authenticated operator sign-off and **two distinct completed, non-simulated sealed tool receipts** (not a guarantee of independent human verification). `demo` findings cannot be verified.
+
+Do not regard empty `05-memory/leads.jsonl` as the definitive registry: the new SQLite lead tables are authoritative. The engagement workspace archive excludes the separate local TaskStore database and encrypted evidence vault; back up those explicitly if a complete case archive is needed. See [docs/PROCESS-CONTINUITY.md](docs/PROCESS-CONTINUITY.md).
+
 ## Automatic private engagement workspace (v0.3 preview)
 
 Every new authorized task now creates an idempotent private directory at `<SECRA_DATA_DIR>/engagements/<task-UUID>/`, with authorization, offline preflight, recon, evidence, reports, memory, phase ledger, cleanup and follow-up scaffolds. Files are owner-only; target/scope are never used as paths. A local tool-presence snapshot is captured without executing scanners or checking the target network.

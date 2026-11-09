@@ -186,3 +186,50 @@ def test_workspace_controls_exist_without_js_target_autofill(tmp_path, monkeypat
     assert '$("target").value=' not in html
     assert '$("scope").value=' not in html
     assert "workspaceAction" in html
+
+
+def test_local_operator_can_manage_versioned_leads_without_network(tmp_path, monkeypatch):
+    client, store = build_client(tmp_path, monkeypatch)
+    tid = store.create("127.0.0.1", "127.0.0.1/32", authorized=True)
+    base = "/api/tasks/" + tid + "/leads"
+    headers = {"X-Secra-Token": "ci-ui-operator-token-123456"}
+    assert client.get(base).status_code == 401
+    assert client.post(base, json={"category": "web", "title": "Header control review"}).status_code == 401
+    result = client.post(base, headers=headers,
+                         json={"category": "web", "title": "Header control review"})
+    assert result.status_code == 200, result.text
+    lead = result.json()
+    assert lead["status"] == "open"
+    assert len(client.get(base, headers=headers).json()) == 1
+    transition = client.post(
+        base + "/" + lead["id"] + "/transition", headers=headers,
+        json={"next_status": "testing", "reason": "started", "expected_version": 1})
+    assert transition.status_code == 200, transition.text
+    stale = client.post(
+        base + "/" + lead["id"] + "/transition", headers=headers,
+        json={"next_status": "negative", "reason": "no_effect", "expected_version": 1})
+    assert stale.status_code == 409
+    negative = client.post(
+        base + "/" + lead["id"] + "/transition", headers=headers,
+        json={"next_status": "negative", "reason": "no_effect", "expected_version": 2})
+    assert negative.status_code == 200
+    history = client.get(base + "/" + lead["id"] + "/events", headers=headers)
+    assert history.status_code == 200
+    assert [e["to_status"] for e in history.json()] == ["open", "testing", "negative"]
+    handoff = client.get("/api/tasks/" + tid + "/handoff", headers=headers)
+    assert handoff.status_code == 200
+    assert handoff.json()["lead_registry"]["negative_count"] == 1
+    assert "Header control review" not in handoff.text
+    assert "127.0.0.1" not in handoff.text
+
+
+def test_hypothesis_board_is_present_and_uses_safe_dom_methods(tmp_path, monkeypatch):
+    client, _ = build_client(tmp_path, monkeypatch)
+    html = client.get("/").text
+    for identifier in ("leads-heading", "lead-title", "lead-category",
+                       "lead-add", "lead-refresh", "lead-list"):
+        assert 'id="' + identifier + '"' in html
+    assert "LEAD_NEXT" in html
+    assert "expected_version:item.version" in html
+    assert "pane.append(card)" in html
+    assert "innerHTML=" not in html

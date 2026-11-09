@@ -93,6 +93,44 @@ The operator UI also exposes authenticated local routes:
 
 The CLI and REST endpoints only work with valid existing authorized task UUIDs. They do not grant permission to send traffic or bypass the tool dispatcher.
 
+## v0.4 Process lead registry (new)
+
+The Takeoff retrospective identified an operational gap: an empty `leads.jsonl` scaffold is not a durable source of truth for active hypotheses, negative results or independent review. SECRA now adds an **operator-owned, versioned SQLite registry** in the existing private `agent-events.sqlite3` (new tables `process_leads` and immutable `process_lead_events`, separate from the Sapper graph).
+
+Each lead has an opaque UUID, category, sanitized short title, status, version, reference to a completed/sealed real observation (optional until review), reason code and UTC history.
+
+Status transitions are constrained:
+
+~~~text
+open --> testing --> review_requested --> verified --> closed
+  |       |                 |
+  v       v                 v
+negative <--               rejected
+  |
+  +--> testing (only with reason "reopened")
+~~~
+
+`verified` is a **local operator sign-off status**; it requires two *distinct*, completed, non-simulated, approved observation receipts from the same task, with valid AES-GCM seals. This does not replace an independent human verifier or automatically prove exploitability. `demo` tasks can never produce operator-verified findings. The model cannot promote a lead directly: no lead-writing MCP tool is exposed. Invalid states, missing seals, cross-engagement references, stale version updates, or simulated receipts are denied.
+
+The local operator UI has a **Hypothesis & verification board** to create, inspect and transition leads. All REST endpoints require the existing local operator token:
+
+- `GET /api/tasks/{uuid}/leads` — operator-only titles, statuses, versions and references.
+- `POST /api/tasks/{uuid}/leads` — `{"category":"web","title":"Header control review"}`.
+- `GET /api/tasks/{uuid}/leads/{lead_id}/events` — ordered decision history.
+- `POST /api/tasks/{uuid}/leads/{lead_id}/transition` — version-controlled update, e.g. `{"next_status":"testing","reason":"started","expected_version":1}`.
+
+`workflow.handoff` and `GET .../handoff` include the compact lead status/count and opaque IDs, **not lead titles, raw descriptions, target values or credentials**. Model-switch context can identify the unresolved work without reading unrelated evidence.
+
+The old `05-memory/leads.jsonl` and `negatives.jsonl` files remain **legacy scaffolds**, not automatically synchronized authoritative data sources. The SQL lead registry is authoritative until a separately audited export function is added. This avoids concurrent agent writes to JSONL and removes the ambiguity that caused Takeoff's post-hoc reconstruction.
+
+### Operational cautions
+
+- The lead registry is stored in the local SQLite file (0600) without field-level encryption. Do not put sensitive findings, IPs, passwords, tokens, personal data or live payloads in titles; the API rejects patterns known to contain sensitive material, but cannot guarantee perfect DLP.
+- The operator is responsible for confirming what was actually tested. An unsuccessful gateway call is **not** automatically a negative finding.
+- A reviewed lead is a tracked process decision; the independent verifier process remains separate.
+- Reports should use actual evidence references and a reviewer note, not treat an arbitrary tool receipt as conclusive proof of a vulnerability.
+- Archives created by `secra_workspace.py` include the per-engagement workspace only. The **encrypted evidence vault and TaskStore SQLite database are stored outside it** and are not bundled; retain/back up those separately under your own data retention policy.
+
 ## What can be measured now
 
 - Audited invocation count, completed/simulated versus blocked/denied, unfinished audit records.

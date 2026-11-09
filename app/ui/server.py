@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 from app.loop.agent import AgentLoop
 from app.loop.store import TaskStore, TaskError
 from app.loop.continuity import build_handoff
+from app.loop.leads import LeadRegistry, LeadError
 from app.workspace import WorkspaceManager, WorkspaceError
 from app.mcp.dispatcher import ToolDispatcher
 
@@ -50,6 +51,19 @@ class ApprovalDecision(BaseModel):
 class PhaseDecision(BaseModel):
     stage: str
     event: str
+
+
+class LeadProposal(BaseModel):
+    category: str = Field(min_length=2, max_length=16)
+    title: str = Field(min_length=5, max_length=120)
+    primary_ref: str | None = None
+
+
+class LeadUpdate(BaseModel):
+    next_status: str
+    reason: str
+    expected_version: int = Field(ge=1)
+    evidence_ref: str | None = None
 
 
 def auth(x_secra_token: str | None = Header(default=None)):
@@ -201,6 +215,49 @@ def verify_manifest(tid: str):
         return WorkspaceManager(STORE.root / "engagements").verify_manifest(tid)
     except (OSError, TaskError, WorkspaceError) as exc:
         raise HTTPException(400, "Manifest unavailable or invalid") from exc
+
+
+@app.get("/api/tasks/{tid}/leads", dependencies=[Depends(auth)])
+def leads(tid: str):
+    """Operator-only detailed lead registry; never expose these titles to LLM."""
+    try:
+        return LeadRegistry(STORE).list(tid)
+    except (TaskError, LeadError):
+        raise HTTPException(404, "Unknown task or lead registry")
+
+
+@app.post("/api/tasks/{tid}/leads", dependencies=[Depends(auth)])
+def propose_lead(tid: str, body: LeadProposal):
+    """Create a local unverified hypothesis; not an instruction to execute."""
+    try:
+        return LeadRegistry(STORE).create(
+            tid, body.category, body.title, primary_ref=body.primary_ref)
+    except (TaskError, LeadError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get("/api/tasks/{tid}/leads/{lead_id}/events", dependencies=[Depends(auth)])
+def lead_history(tid: str, lead_id: str):
+    try:
+        return LeadRegistry(STORE).events(tid, lead_id)
+    except (TaskError, LeadError):
+        raise HTTPException(404, "Unknown lead")
+
+
+@app.post("/api/tasks/{tid}/leads/{lead_id}/transition", dependencies=[Depends(auth)])
+def transition_lead(tid: str, lead_id: str, body: LeadUpdate):
+    """Transitions are operator-authenticated and version-checked.
+
+    An operator sign-off requires two distinct completed reviewable receipts.
+    The second receipt alone does not constitute independent expert verification.
+    """
+    try:
+        return LeadRegistry(STORE).transition(
+            tid, lead_id, body.next_status,
+            reason=body.reason, expected_version=body.expected_version,
+            evidence_ref=body.evidence_ref, operator=True)
+    except (TaskError, LeadError) as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 @app.get("/api/tasks/{tid}/handoff", dependencies=[Depends(auth)])

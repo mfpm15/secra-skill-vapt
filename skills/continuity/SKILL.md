@@ -22,6 +22,14 @@ Use this skill for session transitions, model switching, phase changes, retrospe
 3. **Preserve**: bring forward open hypotheses, negative attempts, cleanup obligations and next actions. If these facts were not recorded, mark them unknown; do not infer them from a command name.
 4. **Verify**: the receiving model answers: What was observed? What is the next permitted action? What was already attempted? What still requires review?
 
+## Durable hypotheses and review decisions
+
+- Lead records now live in the local authenticated operator SQLite process registry. Legacy `05-memory/leads.jsonl` files are scaffolds and not synchronized authoritative data.
+- `workflow.handoff` includes bounded active lead UUIDs, categories, statuses and negative/review counts. It does **not** expose private lead titles or details to a remote model.
+- Do not repeat a negative lead unless the operator records an explicit new rationale. A blocked command is not a negative vulnerability result.
+- `review_requested` is a hypothesis pending operator review; `verified` requires locally authenticated sign-off and two distinct completed, sealed, non-simulated evidence receipts. Neither automatically guarantees independent professional verification.
+- If the checkpoint lists an active UUID without a safe next action, ask the operator for the next authorized step rather than guessing a payload.
+
 ## Process guidance
 
 - At intake, the operator confirms written authorization, target/scope and method constraints. No prefilled target.
