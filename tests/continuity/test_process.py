@@ -107,7 +107,6 @@ def test_missing_invalid_tasks_do_not_create_checkpoint(tmp_path):
     bogus = "00000000-0000-0000-0000-000000000000"
     assert dispatcher.call("workflow.handoff", {"task_id": bogus})["status"] == "denied"
     assert dispatcher.call("workflow.handoff", {"task_id": tid, "path": "/etc/shadow"})["status"] == "denied"
-    assert not store.tool_runs(bogus) if False else True
     assert not store.tool_runs(tid)
 
 
