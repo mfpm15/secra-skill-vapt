@@ -70,6 +70,15 @@ def test_one_page_start_sse_approval_and_stop(tmp_path, monkeypatch):
     assert client.post("/api/tasks/" + tid2 + "/start", headers=headers).status_code == 409
 
 
+def test_operator_must_enter_scope_in_local_console(tmp_path, monkeypatch):
+    client, store = build_client(tmp_path, monkeypatch)
+    html = client.get("/").text
+    assert 'id="target" placeholder=' in html
+    assert 'id="scope" placeholder=' in html
+    assert 'id="target" value=' not in html
+    assert 'id="scope" value=' not in html
+
+
 def test_r3_ui_approval_is_review_only_and_r4_refused(tmp_path, monkeypatch):
     client, store = build_client(tmp_path, monkeypatch)
     headers = {"X-Secra-Token": "ci-ui-operator-token-123456"}
