@@ -6,6 +6,9 @@ denies networking until the separately attested kernel fence is operational.
 from __future__ import annotations
 
 import re
+import json
+import time
+import sqlite3
 import threading
 import uuid
 from pathlib import Path
@@ -38,6 +41,43 @@ class ToolDispatcher:
 
     def call(self, name: str, arguments: dict,
              stop: threading.Event | None = None) -> dict:
+        """Audit each valid invocation BEFORE running an adapter.
+
+        Keeps current result and UI event contracts unchanged; new audit
+        rows contain only tool, time, outcome and encrypted evidence reference.
+        """
+        try:
+            tool = self.manifest.get(name)
+            validated = tool.validate(arguments)
+            tid = canonical_id(validated["task_id"])
+            self.store.require(tid)
+        except (ManifestError, TaskError, KeyError, TypeError):
+            return self._call(name, arguments, stop)
+        try:
+            audit_id = self.store.begin_tool_run(tid, tool.name)
+        except (TaskError, sqlite3.Error, OSError):
+            return receipt("blocked", None, "Local audit unavailable; no tool dispatched.")
+
+        started = time.monotonic()
+        try:
+            response = self._call(name, arguments, stop)
+        except BaseException:
+            # Do not expose raw exception data or risk another unlogged call.
+            response = receipt("blocked", None, "Tool handler failed after audit start.")
+        elapsed = min(7_200_000, max(0, int((time.monotonic() - started) * 1000)))
+        try:
+            self.store.finish_tool_run(
+                tid, audit_id, response["status"], response.get("exit_code"),
+                elapsed, response.get("output_ref"))
+        except (TaskError, sqlite3.Error, OSError):
+            # Execution may have happened; do not falsely claim it was blocked.
+            return receipt("error", response.get("exit_code"),
+                           "Tool audit finalization failed; execution status requires local review.",
+                           response.get("output_ref"))
+        return response
+
+    def _call(self, name: str, arguments: dict,
+              stop: threading.Event | None = None) -> dict:
         try:
             tool = self.manifest.get(name)
             args = tool.validate(arguments)
@@ -45,8 +85,14 @@ class ToolDispatcher:
         except (ManifestError, TaskError, KeyError, TypeError):
             return receipt("denied", None, "Invalid manifest tool, task or tool parameters.")
         tid = task["id"]
-        if task["status"] != "running" or self.store.is_stopped(tid):
+        # Read-only checkpoint is explicitly permitted after a task ends.
+        is_handoff = tool.adapter == "continuity_handoff"
+        if not is_handoff and (task["status"] != "running" or self.store.is_stopped(tid)):
             return receipt("denied", None, "Task is not running or has been stopped.")
+        if is_handoff and task["status"] not in {
+                "created", "running", "completed", "stopped", "exhausted",
+                "failed", "refused", "awaiting_approval"}:
+            return receipt("denied", None, "Task unavailable for checkpoint.")
         if tool.mode not in {"both", task["mode"]}:
             self.store.append(tid, "tool", tool.name, "denied", "Tool unavailable in this task mode.")
             return receipt("denied", None, "Tool unavailable in this task mode.")
@@ -60,6 +106,24 @@ class ToolDispatcher:
         if cancelled.is_set():
             return receipt("cancelled", None, "Operator stopped the task.")
         try:
+            if is_handoff:
+                from app.loop.continuity import build_handoff, short_handoff
+                snapshot = build_handoff(self.store, tid)
+                raw = (json.dumps(snapshot, sort_keys=True, separators=(",", ":")) + "\n").encode()
+                if len(raw) > 65536:
+                    raise RuntimeError("HANDOFF_TOO_LARGE")
+                eid, rid = uuid.UUID(tid), uuid.uuid4()
+                writer = self.vault.begin(eid, rid)
+                try:
+                    writer.append("stdout", raw)
+                    writer.finish()
+                except BaseException:
+                    writer.abort()
+                    raise
+                reference = "evidence://" + tid + "/" + str(rid)
+                result = receipt("completed", 0, short_handoff(snapshot), reference)
+                self.store.append(tid, "tool", name, "done", result["summary"], reference)
+                return result
             if tool.adapter in {"gateway_nmap", "gateway_curl"}:
                 return self._live(task, tool, args, cancelled)
             if tool.adapter == "loopback_head":
