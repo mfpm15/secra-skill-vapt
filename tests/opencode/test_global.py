@@ -160,8 +160,14 @@ def test_sensitive_paths_never_silently_allowed_in_v2_agents():
             "project/client.p12",
             "project/client.pfx",
             "/home/kali/.ssh/id_rsa",
+            "/home/kali/.git-credentials",
+            "/home/kali/.npmrc",
+            "/home/kali/.netrc",
+            "/home/kali/.pypirc",
+            "/home/kali/.docker/config.json",
         ):
             assert result(rules, "read", sensitive) == "deny", (name, sensitive)
+        assert result(rules, "read", "/home/kali/.config/opencode/opencode.json") == "ask", name
         assert result(rules, "grep", "password") == "ask", name
-        if name == "secra-vapt" or name not in {"secra-ctf"}:
+        if name != "secra-ctf":
             assert result(rules, "shell", "cat .env") == "deny", name
