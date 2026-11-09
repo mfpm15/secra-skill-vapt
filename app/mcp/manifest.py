@@ -16,7 +16,7 @@ DEFAULT_MANIFEST = Path(__file__).with_name("manifest.json")
 ADAPTERS = frozenset({"inventory_read", "demo_nmap", "demo_httpx",
                       "report_summary", "gateway_nmap", "gateway_curl",
                       "approval_only", "deny", "loopback_head",
-                      "continuity_handoff"})
+                      "continuity_handoff", "lead_proposal"})
 RISKS = {"R0": 0, "R1": 1, "R2": 2, "R3": 3, "R4": 4}
 OUTPUT_SCHEMA = {
     "type": "object", "additionalProperties": False,
