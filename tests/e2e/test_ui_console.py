@@ -97,6 +97,35 @@ def test_operator_handoff_endpoint_is_authenticated_and_private(tmp_path, monkey
     assert "scope" not in result.text
 
 
+def test_authenticated_workspace_phase_and_manifest_endpoints(tmp_path, monkeypatch):
+    client, store = build_client(tmp_path, monkeypatch)
+    tid = store.create("127.0.0.1", "127.0.0.1/32", authorized=True)
+    headers = {"X-Secra-Token": "ci-ui-operator-token-123456"}
+    assert client.get("/api/tasks/" + tid + "/workspace").status_code == 401
+    initial = client.get("/api/tasks/" + tid + "/workspace", headers=headers)
+    assert initial.status_code == 200
+    body = initial.json()
+    assert body["asset"] == "ASSET_001"
+    assert body["preflight_recorded"] is True
+    assert body["phase_events"] == 2
+    assert "127.0.0.1" not in initial.text
+    added = client.post(
+        "/api/tasks/" + tid + "/phase", headers=headers,
+        json={"stage": "recon", "event": "started"})
+    assert added.status_code == 200
+    assert added.json()["at_utc"].endswith("+00:00")
+    wrong = client.post(
+        "/api/tasks/" + tid + "/phase", headers=headers,
+        json={"stage": "made-up", "event": "completed"})
+    assert wrong.status_code == 400
+    created = client.post("/api/tasks/" + tid + "/manifest", headers=headers)
+    assert created.status_code == 200
+    assert created.json()["file_count"] > 8
+    verified = client.get("/api/tasks/" + tid + "/manifest/verify", headers=headers)
+    assert verified.status_code == 200
+    assert verified.json()["status"] == "verified"
+
+
 def test_r3_ui_approval_is_review_only_and_r4_refused(tmp_path, monkeypatch):
     client, store = build_client(tmp_path, monkeypatch)
     headers = {"X-Secra-Token": "ci-ui-operator-token-123456"}
