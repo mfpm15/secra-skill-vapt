@@ -172,3 +172,64 @@ def test_actual_mcp_handoff_receipt_contains_safe_unfinished_lead(tmp_path):
     assert "127.0.0.1" not in response["summary"]
     assert response["masked"] is True
     assert response["output_ref"].startswith("evidence://")
+
+
+def test_model_can_propose_bounded_unverified_lead_through_mcp(tmp_path):
+    store, tid, reg = scenario(tmp_path, mode="demo")
+    store.start(tid)
+    dispatcher = ToolDispatcher(tmp_path, store=store)
+    response = dispatcher.call("workflow.lead_propose", {
+        "task_id": tid, "category": "web", "title": "Missing response header check"
+    })
+    assert response["status"] == "completed"
+    assert response["masked"] is True
+    assert response["output_ref"] is None
+    assert "Missing response header check" not in response["summary"]
+    assert len(reg.list(tid)) == 1
+    assert reg.list(tid)[0]["status"] == "open"
+    assert reg.summary(tid)["operator_verified_count"] == 0
+    snapshot = dispatcher.call("workflow.handoff", {"task_id": tid})
+    assert snapshot["status"] == "completed"
+    assert reg.list(tid)[0]["id"] in snapshot["summary"]
+
+
+def test_model_proposal_active_lead_cap_and_sensitive_title_gate(tmp_path):
+    store, tid, reg = scenario(tmp_path, mode="demo")
+    store.start(tid)
+    dispatcher = ToolDispatcher(tmp_path, store=store)
+    for number in range(5):
+        response = dispatcher.call("workflow.lead_propose", {
+            "task_id": tid, "category": "api",
+            "title": "Test contract issue " + str(number)
+        })
+        assert response["status"] == "completed"
+    sixth = dispatcher.call("workflow.lead_propose", {
+        "task_id": tid, "category": "api", "title": "Test contract issue 5"
+    })
+    assert sixth["status"] == "blocked"
+    assert len(reg.list(tid)) == 5
+    bad = dispatcher.call("workflow.lead_propose", {
+        "task_id": tid, "category": "web", "title": "192.0.2.42 example"
+    })
+    assert bad["status"] == "blocked"
+    assert "192.0.2.42" not in str(bad)
+    negative = reg.transition(
+        tid, reg.list(tid)[0]["id"], "negative",
+        reason="no_effect", expected_version=1)
+    assert negative["status"] == "negative"
+    reopened_budget = dispatcher.call("workflow.lead_propose", {
+        "task_id": tid, "category": "api", "title": "Additional route review"
+    })
+    assert reopened_budget["status"] == "completed"
+    assert reg.summary(tid)["negative_count"] == 1
+    assert reg.summary(tid)["total_in_window"] == 6
+
+
+def test_mcp_exposes_no_agent_verification_tool(tmp_path):
+    store, tid, reg = scenario(tmp_path, mode="demo")
+    dispatcher = ToolDispatcher(tmp_path, store=store)
+    names = set(dispatcher.manifest.tools)
+    assert "workflow.lead_propose" in names
+    assert "workflow.lead_verify" not in names
+    assert "workflow.lead_signoff" not in names
+    assert dispatcher.manifest.get("workflow.lead_propose").risk == "R0"
