@@ -15,6 +15,7 @@ import uuid
 from pathlib import Path
 
 from app.security import redact, validate_scope
+from app.workspace import WorkspaceManager, WorkspaceError
 
 STATUSES = frozenset({"created", "running", "completed", "exhausted",
                       "failed", "stopped", "refused", "awaiting_approval"})
@@ -93,6 +94,12 @@ class TaskStore:
         if not isinstance(model, str) or not re.fullmatch(r"[A-Za-z0-9._:/+-]{0,110}", model):
             raise TaskError("MODEL_INVALID")
         tid = str(uuid.uuid4())
+        # Persist private alias-only workspace before accepting a new task.
+        # Scope and target stay in the existing local TaskStore database.
+        try:
+            WorkspaceManager(self.root / "engagements").initialize(tid)
+        except (OSError, WorkspaceError) as exc:
+            raise TaskError("WORKSPACE_INIT_FAILED") from exc
         with self._db() as db:
             db.execute("INSERT INTO tasks (id,target,scope,mode,model,authorized,status) VALUES (?,?,?,?,?,?,?)",
                        (tid, checked, scope, mode, model, 1, "created"))
