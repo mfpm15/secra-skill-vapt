@@ -115,11 +115,15 @@ def _safe_files(base: Path, archive_prefix: str, *, limit: int = MAX_FILES):
         if not stat.S_ISREG(path.stat().st_mode):
             raise BundleError("BUNDLE_NONREGULAR_FILE")
         rel = path.relative_to(base).as_posix()
+        if path.stat().st_size > MAX_BYTES:
+            raise BundleError("BUNDLE_FILE_TOO_LARGE")
         yield archive_prefix + "/" + rel, path.read_bytes()
 
 
 def create_bundle(store: TaskStore, task_id: str, passphrase: str) -> bytes:
     task = store.require(task_id)
+    if task["status"] not in {"completed", "stopped", "failed", "refused", "exhausted"}:
+        raise BundleError("BUNDLE_TASK_MUST_BE_TERMINAL")
     # Local case-integrity prerequisite prevents a "complete" export with
     # missing referenced evidence, altered workspace files or audit gaps.
     from app.loop.case_integrity import check_case
@@ -223,6 +227,11 @@ def restore_bundle(bundle: bytes, passphrase: str, destination: Path) -> dict:
         expected = manifest.get("file_sha256")
         if not isinstance(expected, dict) or set(expected) != set(names) - {"bundle-manifest.json"}:
             raise BundleError("BUNDLE_FILE_INDEX_INVALID")
+        total_uncompressed = sum(
+            zf.getinfo(name).file_size for name in names
+        )
+        if total_uncompressed > MAX_BYTES:
+            raise BundleError("BUNDLE_ZIP_EXPANSION_LIMIT")
         prefix = "data/engagements/" + task_id + "/"
         allowed_files = {
             "data/agent-events.sqlite3",
