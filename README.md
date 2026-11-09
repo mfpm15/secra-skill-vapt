@@ -38,6 +38,17 @@ The agent loop is bounded to **25 tool steps and 20 minutes**; a stopped, refuse
 
 For regression testing install `requirements-dev.txt` and run `python -m pytest tests/e2e -q -ra` and `python -m pytest -m "not lab" -q`. Privileged `tests/fence/ -m lab` requires an independently provisioned Kali VM; no lab proofs have been provided.
 
+## Bug bounty casework and model evaluation (v0.6 preview)
+
+SECRA now includes **operator-only**, offline bug bounty report quality checks, a **per-task encrypted case bundle** that includes filtered SQLite plus the corresponding AES-GCM vault evidence, a synthetic model tool-choice benchmark (optional local 9Router model), and non-intrusive Kali live fence prerequisite diagnostics.
+
+- `scripts/secra_bounty_report.py`: requires a locally signed lead, sealed evidence, actual human-reproduced PoC and current program-rule confirmations; creates a private draft, **never submits**.
+- `scripts/secra_case_bundle.py`: encrypts one completed engagement's workspace, SQLite and task vault into one passphrase-protected bundle; restores only to a new directory.
+- `scripts/secra_model_eval.py`: 3 fixed synthetic tool-choice scenarios; **does not measure real VAPT exploit success**.
+- `scripts/secra_live_preflight.py`: checks Kali setup prerequisites but intentionally **does not certify kernel network enforcement**.
+
+See [docs/BUGBOUNTY-OPERATIONS.md](docs/BUGBOUNTY-OPERATIONS.md). Existing production limits remain: a single IPv4 target, very few reviewed live adapters, and no unrestricted shell or generalized bug-bounty wildcard domain scope. Confirm each program's scope and human-in-the-loop testing rules before live use.
+
 ## Complete offline agent smoke (v0.5 preview)
 
 Run a temporary, network-free synthetic workflow from any directory:
