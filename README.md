@@ -38,6 +38,19 @@ The agent loop is bounded to **25 tool steps and 20 minutes**; a stopped, refuse
 
 For regression testing install `requirements-dev.txt` and run `python -m pytest tests/e2e -q -ra` and `python -m pytest -m "not lab" -q`. Privileged `tests/fence/ -m lab` requires an independently provisioned Kali VM; no lab proofs have been provided.
 
+## OpenCode (Kali Linux) — curated VAPT/CTF knowledge
+
+SECRA includes a **no-execution Python installer** for OpenCode skills and two project agents. Read [docs/OPENCODE-KALI.md](docs/OPENCODE-KALI.md) for scoped Kali setup, optional pre-reviewed third-party knowledge imports and version-aware MCP configuration.
+
+~~~bash
+python3 scripts/opencode_security.py install --scope project --dry-run
+python3 scripts/opencode_security.py install --scope project
+python3 scripts/opencode_security.py verify --scope project
+opencode --agent secra-vapt
+~~~
+
+This installs **20 SECRA-authored skill references**. Another **14 allowlisted references** from Claude-Red, CTF Skills and Trail of Bits can be installed only after separate checkout/review and explicit opt-in. Third-party scripts and executable files are never copied. OpenCode skills do **not** bypass SECRA's approval, data-minimization or Kali kernel egress gates; live target operations remain unavailable until the independent attestation is satisfied.
+
 ## Quick start on Kali Linux or Linux
 
 Requires Python 3.11+, Nmap, and curl. In the repository root:
