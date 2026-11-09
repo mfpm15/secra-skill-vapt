@@ -104,6 +104,15 @@ permissions:
   - action: subagent
     resource: secra-ctf-forensics
     effect: allow
+  - action: subagent
+    resource: secra-ctf-misc
+    effect: allow
+  - action: subagent
+    resource: secra-ctf-mobile
+    effect: allow
+  - action: subagent
+    resource: secra-forensics
+    effect: allow
 ---
 
 # SECRA CTF Coordinator (OpenCode V2)
@@ -119,3 +128,7 @@ permissions:
 - Do not forward private flags or authentication tokens to external LLM providers.
 - Lessons belong in ~/.local/share/secra-learning/inbox/ until an operator reviews and promotes them.
 - If tools or isolated runtime are missing, report exactly what's unavailable rather than inventing results.
+
+## More CTF specialties v2
+
+Delegate mobile app challenges to secra-ctf-mobile and nonstandard local artifact challenges to secra-ctf-misc; use forensic specialist for evidence-only PCAP/memory files. Never interpret a candidate flag as verified without actual challenge result.
