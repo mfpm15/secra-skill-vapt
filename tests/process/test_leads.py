@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from app.evidence_vault import EvidenceVault
-from app.loop.continuity import build_handoff
+from app.loop.continuity import build_handoff, short_handoff
 from app.loop.leads import LeadRegistry, LeadError
 from app.loop.store import TaskStore
 
@@ -144,3 +144,16 @@ def test_lead_read_cannot_cross_engagement_boundary(tmp_path):
     lead = reg.create(tid, "network", "Service version confirmation")
     with pytest.raises(LeadError, match="NOT_FOUND"):
         reg.get(second, lead["id"])
+
+
+def test_compact_mcp_handoff_carries_active_lead_without_title_or_scope(tmp_path):
+    store, tid, reg = scenario(tmp_path)
+    lead = reg.create(tid, "api", "Object permission hypothesis")
+    snapshot = build_handoff(store, tid)
+    summary = short_handoff(snapshot)
+    assert lead["id"] in summary
+    assert "open" in summary
+    assert len(summary) <= 490
+    assert "Object permission hypothesis" not in summary
+    assert "127.0.0.1" not in summary
+    assert "No findings verified" in summary
