@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 
 from app.loop.agent import AgentLoop
 from app.loop.store import TaskStore, TaskError
+from app.loop.continuity import build_handoff
 from app.mcp.dispatcher import ToolDispatcher
 
 DATA = Path(os.environ.get("SECRA_DATA_DIR", str(Path(__file__).resolve().parents[2] / "data")))
@@ -142,6 +143,15 @@ async def sse_events(tid: str, request: Request, after: int = 0):
     return StreamingResponse(stream(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-store",
                                       "X-Accel-Buffering": "no"})
+
+
+@app.get("/api/tasks/{tid}/handoff", dependencies=[Depends(auth)])
+def handoff(tid: str):
+    """Operator-only sanitized process checkpoint, never raw target evidence."""
+    try:
+        return build_handoff(STORE, tid)
+    except TaskError as exc:
+        raise HTTPException(404, "Unknown task") from exc
 
 
 @app.get("/api/tasks/{tid}/approvals", dependencies=[Depends(auth)])
