@@ -18,7 +18,8 @@ FIELDS = frozenset({
     "asset_scope_confirmed", "automation_allowed", "rules_acknowledged",
     "title", "weakness", "severity", "prerequisites", "steps",
     "observed_result", "security_impact", "root_cause", "remediation",
-    "operator_reviewed", "program_disclosure_allowed"
+    "operator_reviewed", "program_disclosure_allowed",
+    "poc_reproduced_by_operator", "rate_limit_complied"
 })
 
 
@@ -53,7 +54,8 @@ def evaluate(store: TaskStore, task_id: str, lead_id: str, draft: dict) -> dict:
     if draft.get("severity") not in SEVERITIES:
         gaps.append("severity_not_selected")
     for key in ("asset_scope_confirmed", "rules_acknowledged",
-                "operator_reviewed", "program_disclosure_allowed"):
+                "operator_reviewed", "program_disclosure_allowed",
+                "poc_reproduced_by_operator", "rate_limit_complied"):
         if draft.get(key) is not True:
             gaps.append(key + "_not_confirmed")
     if type(draft.get("automation_allowed")) is not bool:
