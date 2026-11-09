@@ -16,7 +16,7 @@ from uuid import UUID
 from .security import redact, BEARER, IPV4, EMAIL, JWT, SECRET
 
 SCRIPT = Path(__file__).resolve().parents[1] / "vendor" / "sapper_v2" / "sapper.py"
-GOAL = "Document an authorized, bounded VAPT assessment with verified observations and a final report."
+GOAL = "Document authorized, bounded SECRA security research with verified observations, preserved evidence and an operator-reviewed report."
 _ID = re.compile(r"^[fi]\d{3,}$")
 _TITLE = re.compile(r"^[A-Za-z][A-Za-z0-9 ]{0,69}$")
 GRAPH_ROOT: Path | None = None
