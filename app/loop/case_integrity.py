@@ -15,7 +15,7 @@ from app.workspace import WorkspaceManager, WorkspaceError
 from app.loop.store import TaskStore
 
 REF = re.compile(r"^evidence://([a-f0-9-]{36})/([a-f0-9-]{36})$")
-MAX_RUN_ROWS = 1000
+MAX_RUN_ROWS = 300
 
 
 def check_case(store: TaskStore, task_id: str) -> dict:
@@ -34,10 +34,13 @@ def check_case(store: TaskStore, task_id: str) -> dict:
             "SELECT id,tool,status,finished_at,output_ref FROM tool_runs "
             "WHERE task_id=? ORDER BY id LIMIT ?", (task["id"], MAX_RUN_ROWS + 1)
         ).fetchall()
-        lead_rows = db.execute(
+        has_leads = db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='process_leads'"
+        ).fetchone()
+        lead_rows = (db.execute(
             "SELECT primary_ref,review_ref FROM process_leads WHERE task_id=? "
             "ORDER BY id LIMIT ?", (task["id"], MAX_RUN_ROWS + 1)
-        ).fetchall()
+        ).fetchall() if has_leads else [])
 
     truncated = len(run_rows) > MAX_RUN_ROWS or len(lead_rows) > MAX_RUN_ROWS
     runs = run_rows[:MAX_RUN_ROWS]
