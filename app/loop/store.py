@@ -6,6 +6,7 @@ include its address, credentials, raw tool output, or unmasked model messages.
 from __future__ import annotations
 
 import ipaddress
+import datetime as dt
 import json
 import os
 import re
@@ -14,6 +15,7 @@ import uuid
 from pathlib import Path
 
 from app.security import redact, validate_scope
+from app.workspace import WorkspaceManager, WorkspaceError
 
 STATUSES = frozenset({"created", "running", "completed", "exhausted",
                       "failed", "stopped", "refused", "awaiting_approval"})
@@ -56,6 +58,16 @@ class TaskStore:
                 id TEXT PRIMARY KEY, task_id TEXT NOT NULL, tool TEXT NOT NULL,
                 risk TEXT NOT NULL, state TEXT NOT NULL,
                 created TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
+            # Audited invocations, recorded BEFORE dispatch, UTC timestamps.
+            # No argv, target, scope, credentials or raw tool output.
+            db.execute("""CREATE TABLE IF NOT EXISTS tool_runs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id TEXT NOT NULL, tool TEXT NOT NULL,
+                started_at TEXT NOT NULL, finished_at TEXT,
+                duration_ms INTEGER, status TEXT NOT NULL,
+                exit_code INTEGER, output_ref TEXT)""")
+            db.execute("CREATE INDEX IF NOT EXISTS tool_runs_task "
+                       "ON tool_runs(task_id,id)")
         os.chmod(self.path, 0o600)
 
     def _db(self):
@@ -82,6 +94,14 @@ class TaskStore:
         if not isinstance(model, str) or not re.fullmatch(r"[A-Za-z0-9._:/+-]{0,110}", model):
             raise TaskError("MODEL_INVALID")
         tid = str(uuid.uuid4())
+        # Persist private alias-only workspace before accepting a new task.
+        # Scope and target stay in the existing local TaskStore database.
+        try:
+            workspace = WorkspaceManager(self.root / "engagements")
+            workspace.initialize(tid)
+            workspace.capture_preflight(tid)
+        except (OSError, WorkspaceError) as exc:
+            raise TaskError("WORKSPACE_INIT_FAILED") from exc
         with self._db() as db:
             db.execute("INSERT INTO tasks (id,target,scope,mode,model,authorized,status) VALUES (?,?,?,?,?,?,?)",
                        (tid, checked, scope, mode, model, 1, "created"))
@@ -96,6 +116,19 @@ class TaskStore:
             raise TaskError("TASK_NOT_AUTHORIZED")
         return dict(row)
 
+    def _note_test_phase(self, tid: str, event: str) -> None:
+        """Supplementary UTC workspace phase marker; DB state is authoritative.
+
+        Phase file I/O may fail independently of SQLite; never invent a
+        timestamp or retroactively pretend that it was committed.
+        """
+        try:
+            WorkspaceManager(self.root / "engagements").record_phase(
+                tid, "testing", event)
+        except (OSError, WorkspaceError):
+            self.append(tid, "task", "", "error",
+                        "Workspace testing-phase marker unavailable; DB task state remains authoritative.")
+
     def start(self, tid: str) -> None:
         with self._db() as db:
             result = db.execute("UPDATE tasks SET status='running', stop=0 WHERE id=? AND status='created'",
@@ -103,6 +136,7 @@ class TaskStore:
             if result.rowcount != 1:
                 raise TaskError("TASK_NOT_STARTABLE")
         self.append(tid, "task", "", "running", "Authorized workflow started.")
+        self._note_test_phase(tid, "started")
 
     def set_status(self, tid: str, status: str, message: str) -> None:
         if status not in STATUSES:
@@ -113,12 +147,16 @@ class TaskStore:
         with self._db() as db:
             db.execute("UPDATE tasks SET status=? WHERE id=?", (status, tid))
         self.append(tid, "task", "", status, message)
+        if status in {"completed", "failed", "exhausted", "refused", "awaiting_approval"}:
+            self._note_test_phase(
+                tid, "completed" if status == "completed" else "blocked")
 
     def stop(self, tid: str) -> None:
         self.require(tid)
         with self._db() as db:
             db.execute("UPDATE tasks SET stop=1,status='stopped' WHERE id=?", (canonical_id(tid),))
         self.append(tid, "task", "", "stopped", "Operator requested emergency stop.")
+        self._note_test_phase(tid, "blocked")
 
     def is_stopped(self, tid: str) -> bool:
         t = self.require(tid)
@@ -152,6 +190,61 @@ class TaskStore:
                 "SELECT seq,kind,tool,status,summary,output_ref,stamp "
                 "FROM events WHERE task_id=? AND seq>? ORDER BY seq LIMIT ?",
                 (tid, after, limit))]
+
+
+    @staticmethod
+    def utc_now() -> str:
+        """Actual UTC wall-clock timestamp; never reconstruct phase times."""
+        return dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds")
+
+    def begin_tool_run(self, tid: str, tool: str) -> int:
+        """Durably log invocation BEFORE dispatch, including direct MCP calls.
+
+        The caller must abort execution when this method fails. Arguments and
+        customer addresses are intentionally never included in this record.
+        """
+        self.require(tid)
+        if not isinstance(tool, str) or not re.fullmatch(r"[A-Za-z0-9_.-]{1,80}", tool):
+            raise TaskError("TOOL_AUDIT_NAME_INVALID")
+        with self._db() as db:
+            cursor = db.execute(
+                "INSERT INTO tool_runs(task_id,tool,started_at,status) VALUES(?,?,?,?)",
+                (tid, tool, self.utc_now(), "requested"))
+            return cursor.lastrowid
+
+    def finish_tool_run(self, tid: str, audit_id: int, status: str,
+                        exit_code: int | None, duration_ms: int,
+                        output_ref: str | None = None) -> None:
+        """Record outcomes without treating a receipt as a verified finding."""
+        self.require(tid)
+        if (type(audit_id) is not int or audit_id <= 0
+                or status not in {"completed", "simulated", "denied", "blocked",
+                                  "approval_required", "cancelled", "error"}
+                or type(duration_ms) is not int or not 0 <= duration_ms <= 7_200_000
+                or (exit_code is not None and
+                    (type(exit_code) is not int or not -255 <= exit_code <= 255))
+                or (output_ref is not None and
+                    not re.fullmatch(r"evidence://[a-f0-9-]{36}/[a-f0-9-]{36}", output_ref))):
+            raise TaskError("TOOL_AUDIT_OUTCOME_INVALID")
+        with self._db() as db:
+            updated = db.execute(
+                "UPDATE tool_runs SET finished_at=?,duration_ms=?,status=?,"
+                "exit_code=?,output_ref=? WHERE id=? AND task_id=? AND status='requested'",
+                (self.utc_now(), duration_ms, status, exit_code, output_ref,
+                 audit_id, tid))
+            if updated.rowcount != 1:
+                raise TaskError("TOOL_AUDIT_STATE_INVALID")
+
+    def tool_runs(self, tid: str, *, limit: int = 200) -> list[dict]:
+        """Bounded sanitized execution ledger for continuity and evaluations."""
+        self.require(tid)
+        if type(limit) is not int or not 1 <= limit <= 200:
+            raise TaskError("TOOL_AUDIT_LIMIT_INVALID")
+        with self._db() as db:
+            return [dict(r) for r in db.execute(
+                "SELECT id,tool,started_at,finished_at,duration_ms,status,"
+                "exit_code,output_ref FROM tool_runs WHERE task_id=? "
+                "ORDER BY id DESC LIMIT ?", (tid, limit))][::-1]
 
     def request_approval(self, tid: str, tool: str, risk: str) -> str:
         self.require(tid)

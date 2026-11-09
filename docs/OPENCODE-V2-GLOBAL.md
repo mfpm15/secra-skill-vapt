@@ -13,7 +13,7 @@ Referensi resmi:
 
 ## Upgrade instalasi yang sudah ada (OpenCode 2.2.5)
 
-Jika Anda sudah memasang 34 skill dan 13 agent sebelumnya, jangan jalankan clone baru atau menghapus config global.
+Jika Anda sudah memasang 35 skill dan 13 agent sebelumnya, jangan jalankan clone baru atau menghapus config global.
 
 **Perhatian:** installer mungkin sebelumnya memiliki perbaikan lokal satu baris untuk lokasi Semgrep. Jalankan `git diff -- scripts/opencode_security.py` dari repo dan periksa hasilnya. **Hanya bila diff benar-benar menunjukkan perubahan path** `plugins/static-analysis/skills/static-analysis` menjadi `plugins/static-analysis/skills/semgrep`, aman untuk menggunakan `git restore -- scripts/opencode_security.py` karena patch identik sudah tersedia di main upstream. Bila ada perubahan lain, simpan dan rekonsiliasi perubahan tersebut terlebih dahulu; jangan memaksa pull.
 
@@ -64,7 +64,7 @@ git clone https://github.com/mfpm15/secra-skill-vapt.git \
 
 Jika sudah pernah clone, gunakan checkout Anda yang sekarang; jangan clone dua kali atau menimpa perubahan lokal. Ganti path pada perintah berikut sesuai checkout Anda.
 
-## 2. Pasang 20 skills asli + 13 agent global
+## 2. Pasang 21 skills asli + 13 agent global
 
 ~~~bash
 SECRA_REPO="$HOME/.local/share/secra/repo"
@@ -81,7 +81,7 @@ python3 "$SECRA_REPO/scripts/opencode_global.py" verify \
 
 Hasil:
 
-- 20 keterampilan SECRA di `~/.config/opencode/skills/`.
+- 21 keterampilan SECRA di `~/.config/opencode/skills/`.
 - 2 agent utama: `secra-vapt` dan `secra-ctf`.
 - 11 agent spesialis untuk recon, web, API, network, verification, reporting, dan CTF.
 - Local learning di `~/.local/share/secra-learning/{inbox,reviewed}/`.
@@ -192,6 +192,19 @@ Agent `secra-vapt` akan meminta Anda mengisi engagement melalui UI SECRA lokal:
 - Batas waktu, metode yang boleh, pengecualian, dan syarat pembatasan lainnya.
 
 **Pengguna sendiri yang mengisi dan mengedit scope**, bukan agent yang menciptakan IP atau memperluas target. Setelah task dibuat, berikan hanya ID task/engagement ke OpenCode. Ini menghindari target IP mentah masuk ke prompt provider model eksternal. SECRA memegang real target secara lokal dan memverifikasi scope sebelum operasi tool. Jika scope belum diisi, agent hanya boleh melakukan perencanaan.
+
+## Model handoff v0.3 (new)
+
+The globally installed `secra-agent-continuity` skill guides periodic checkpoints before model changes or at task completion. SECRA MCP now advertises **10 reviewed tools** including the read-only `workflow.handoff`. A checkpoint seals metadata-only tool receipts; it does not certify findings or authorize more network tools.
+
+~~~bash
+REPO="$HOME/.local/share/secra/repo"
+python3 "$REPO/scripts/secra_handoff.py" --data-dir "$REPO/data" \
+  --task-id "ENTER-YOUR-VALID-TASK-UUID" \
+  --output "$HOME/HANDOFF-secra.md"
+~~~
+
+The file is created with mode 0600. Do not use this command until a real task exists. New installs have **21 first-party skills** and optional 14 external references (35 total). For existing installs use `--replace` to update managed global agent profiles, preserving unmanaged files.
 
 ## 7. Jalankan dari folder mana pun
 

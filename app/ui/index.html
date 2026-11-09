@@ -52,7 +52,18 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <div class="legend"><span><i class="dot"></i> Event stream (SSE)</span><span>Asset: ASSET_001</span><span id="task-id"></span></div>
 <div id="timeline" aria-live="polite"><div class="entry muted">No task started. A completed demo records real tool-dispatch events with simulated observations only.</div></div>
 <div id="approvals"><h2 style="margin-top:24px">Approval queue</h2><div class="muted" id="approval-list">No pending approvals.</div></div>
-</div></section></main>
+</div></section>
+<section class="panel" style="margin-top:22px" aria-labelledby="workspace-heading">
+<h2 id="workspace-heading">Engagement workspace &amp; model continuity</h2>
+<p class="sub" style="margin-bottom:12px">A private folder tree is created automatically after an authorized task is accepted. Preflight is offline-only; raw evidence stays in the local encrypted vault.</p>
+<div class="actions">
+<button id="workspace-refresh" type="button">Workspace status</button>
+<button id="workspace-manifest" type="button">Create SHA-256 manifest</button>
+<button id="workspace-verify" type="button">Verify integrity</button>
+<button id="workspace-handoff" type="button">Handoff checkpoint</button>
+</div>
+<pre class="entry" id="workspace-output" style="white-space:pre-wrap;font-size:12px;max-height:310px;overflow:auto" aria-live="polite">Start or select a task to inspect its private workspace.</pre>
+</section></main>
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
@@ -109,16 +120,38 @@ async function stream(tid,serial){
  badge(info.status);
  if(["completed","stopped","failed","exhausted","refused","awaiting_approval"].includes(info.status))$("stop").disabled=true;
 }
+async function workspaceAction(kind){
+ if(!task){$("workspace-output").textContent="Create an authorized task before inspecting workspace.";return;}
+ try{
+  const path="/api/tasks/"+encodeURIComponent(task);
+  let result;
+  if(kind==="status")result=await api(path+"/workspace");
+  else if(kind==="manifest")result=await api(path+"/manifest","POST",{});
+  else if(kind==="verify")result=await api(path+"/manifest/verify");
+  else result=await api(path+"/handoff");
+  const out=$("workspace-output");
+  if(kind==="status"){
+   out.textContent="Workspace: "+result.workspace+"\nPreflight recorded: "+result.preflight_recorded+"\nRecorded phase events: "+result.phase_events+"\nLatest phase: "+JSON.stringify(result.latest_phase)+"\nManifest exists: "+result.manifest_present;
+  }else if(kind==="handoff"){
+   out.textContent="Task: "+result.task_id+"\nStatus: "+result.task_status+"\nGenerated: "+result.generated_at_utc+"\nAudited calls: "+result.metrics.tool_invocations_in_window+"\nCompleted/simulated: "+result.metrics.successful_receipts+"\nBlocked/denied: "+result.metrics.blocked_or_denied_receipts+"\nIncomplete: "+result.metrics.incomplete_audit_records+"\nVerified findings: not measured\nSnapshot: "+result.snapshot_sha256;
+  }else out.textContent=JSON.stringify(result,null,2);
+ }catch(e){$("workspace-output").textContent="Workspace request: "+String(e.message);}
+}
+$("workspace-refresh").onclick=()=>workspaceAction("status");
+$("workspace-manifest").onclick=()=>workspaceAction("manifest");
+$("workspace-verify").onclick=()=>workspaceAction("verify");
+$("workspace-handoff").onclick=()=>workspaceAction("handoff");
 $("start").onclick=async()=>{
  try{
   $("start").disabled=true;runSerial++;lastSeq=0;$("timeline").replaceChildren();
   const form={target:ctl("target"),scope:ctl("scope"),mode:ctl("mode"),model:ctl("model"),authorized:$("authorized").checked};
   const created=await api("/api/tasks","POST",form);
   task=created.id;$("task-id").textContent=task.slice(0,8);$("stop").disabled=false;
+  await workspaceAction("status");
   await api("/api/tasks/"+encodeURIComponent(task)+"/start","POST",{});
   badge("running");await stream(task,runSerial);
  }catch(e){badge("Error");$("notice").textContent=e.message;}finally{$("start").disabled=false;}
 };
 $("stop").onclick=async()=>{if(!task)return;try{await api("/api/tasks/"+encodeURIComponent(task)+"/stop","POST",{});badge("stopped");$("stop").disabled=true;runSerial++;await approvals();}catch(e){badge(e.message);}};
-$("mode").onchange=()=>{if(["demo","local"].includes(ctl("mode"))){$("target").value="127.0.0.1";$("scope").value="127.0.0.1/32";}};
+$("mode").onchange=()=>{const local=["demo","local"].includes(ctl("mode"));$("target").placeholder=local?"Demo/lab example: 127.0.0.1":"Enter your explicitly authorized IPv4";$("scope").placeholder=local?"Demo/lab example: 127.0.0.1/32":"Enter the exact approved CIDR";};
 </script></body></html>

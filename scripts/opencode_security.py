@@ -47,6 +47,7 @@ FIRST_PARTY = (
     ("skills/ad_enum", "secra-agent-ad-enum", "Plan scoped Active Directory inventory and enumeration."),
     ("skills/privesc", "secra-agent-privesc", "Review potential privilege-boundary weaknesses without unsanctioned escalation."),
     ("skills/reporting", "secra-agent-reporting", "Summarize authorized assessment evidence and limitations."),
+    ("skills/continuity", "secra-agent-continuity", "Preserve audited state, evidence references and concise inter-model handoff checkpoints."),
 )
 
 # Only these specific locations are eligible for optional external installation.

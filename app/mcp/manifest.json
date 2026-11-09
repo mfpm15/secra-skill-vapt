@@ -220,6 +220,26 @@
           "task_id"
         ]
       }
+    },
+    {
+      "name": "workflow.handoff",
+      "description": "Seal and return a sanitized, evidence-linked task handoff checkpoint. No network, target IP, or model reasoning text.",
+      "risk": "R0",
+      "adapter": "continuity_handoff",
+      "mode": "both",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      }
     }
   ]
 }

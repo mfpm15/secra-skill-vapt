@@ -43,7 +43,7 @@ def test_global_install_from_arbitrary_directory(tmp_path):
     result = invoke("install", "--major", "2", "--config-dir", config, "--learning-dir", learning)
     assert result.returncode == 0, result.stderr
     assert len(list((config / "agents").glob("*.md"))) == 13
-    assert len(list((config / "skills").glob("*/SKILL.md"))) == 20
+    assert len(list((config / "skills").glob("*/SKILL.md"))) == 21
     assert (learning / "inbox").is_dir()
     assert (learning / "reviewed").is_dir()
     assert invoke("verify", "--major", "2", "--config-dir", config, "--learning-dir", learning).returncode == 0

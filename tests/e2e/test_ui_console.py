@@ -79,6 +79,53 @@ def test_operator_must_enter_scope_in_local_console(tmp_path, monkeypatch):
     assert 'id="scope" value=' not in html
 
 
+
+def test_operator_handoff_endpoint_is_authenticated_and_private(tmp_path, monkeypatch):
+    client, store = build_client(tmp_path, monkeypatch)
+    tid = store.create("127.0.0.1", "127.0.0.1/32", authorized=True)
+    denied = client.get("/api/tasks/" + tid + "/handoff")
+    assert denied.status_code == 401
+    headers = {"X-Secra-Token": "ci-ui-operator-token-123456"}
+    result = client.get("/api/tasks/" + tid + "/handoff", headers=headers)
+    assert result.status_code == 200
+    payload = result.json()
+    assert payload["schema"] == "secra-continuity-v1"
+    assert payload["task_id"] == tid
+    assert payload["verified_facts"] == []
+    assert payload["metrics"]["ttfv_seconds"] is None
+    assert "127.0.0.1" not in result.text
+    assert "scope" not in result.text
+
+
+def test_authenticated_workspace_phase_and_manifest_endpoints(tmp_path, monkeypatch):
+    client, store = build_client(tmp_path, monkeypatch)
+    tid = store.create("127.0.0.1", "127.0.0.1/32", authorized=True)
+    headers = {"X-Secra-Token": "ci-ui-operator-token-123456"}
+    assert client.get("/api/tasks/" + tid + "/workspace").status_code == 401
+    initial = client.get("/api/tasks/" + tid + "/workspace", headers=headers)
+    assert initial.status_code == 200
+    body = initial.json()
+    assert body["asset"] == "ASSET_001"
+    assert body["preflight_recorded"] is True
+    assert body["phase_events"] == 2
+    assert "127.0.0.1" not in initial.text
+    added = client.post(
+        "/api/tasks/" + tid + "/phase", headers=headers,
+        json={"stage": "recon", "event": "started"})
+    assert added.status_code == 200
+    assert added.json()["at_utc"].endswith("+00:00")
+    wrong = client.post(
+        "/api/tasks/" + tid + "/phase", headers=headers,
+        json={"stage": "made-up", "event": "completed"})
+    assert wrong.status_code == 400
+    created = client.post("/api/tasks/" + tid + "/manifest", headers=headers)
+    assert created.status_code == 200
+    assert created.json()["file_count"] > 8
+    verified = client.get("/api/tasks/" + tid + "/manifest/verify", headers=headers)
+    assert verified.status_code == 200
+    assert verified.json()["status"] == "verified"
+
+
 def test_r3_ui_approval_is_review_only_and_r4_refused(tmp_path, monkeypatch):
     client, store = build_client(tmp_path, monkeypatch)
     headers = {"X-Secra-Token": "ci-ui-operator-token-123456"}
@@ -127,3 +174,15 @@ def test_python_m_app_serves_localhost(tmp_path):
         except subprocess.TimeoutExpired:
             process.kill()
             process.communicate(timeout=3)
+
+
+def test_workspace_controls_exist_without_js_target_autofill(tmp_path, monkeypatch):
+    client, _ = build_client(tmp_path, monkeypatch)
+    html = client.get("/").text
+    for item in ("workspace-refresh", "workspace-manifest",
+                 "workspace-verify", "workspace-handoff", "workspace-output"):
+        assert 'id="' + item + '"' in html
+    # Switching mode must not silently change operator-provided scope.
+    assert '$("target").value=' not in html
+    assert '$("scope").value=' not in html
+    assert "workspaceAction" in html
