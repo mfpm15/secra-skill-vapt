@@ -86,7 +86,7 @@ class ToolDispatcher:
             return receipt("denied", None, "Invalid manifest tool, task or tool parameters.")
         tid = task["id"]
         # Read-only checkpoint is explicitly permitted after a task ends.
-        is_handoff = tool.adapter in {"continuity_handoff", "capability_readiness"}
+        is_handoff = tool.adapter in {"continuity_handoff", "capability_readiness", "sapper_frontier"}
         if not is_handoff and (task["status"] != "running" or self.store.is_stopped(tid)):
             return receipt("denied", None, "Task is not running or has been stopped.")
         if is_handoff and task["status"] not in {
@@ -110,6 +110,35 @@ class ToolDispatcher:
                 from app.loop.readiness import inspect_capabilities, short_capabilities
                 report = inspect_capabilities(self.store, self.manifest, tid)
                 result = receipt("completed", 0, short_capabilities(report))
+                self.store.append(tid, "tool", name, "done", result["summary"])
+                return result
+            if tool.adapter == "sapper_initialize":
+                from app.sapper_integration import initialize_graph
+                anchor_id = initialize_graph(tid, self.root)
+                summary = (
+                    "Sapper-v2 authorized local task graph initialized; "
+                    "sanitized root fact " + anchor_id
+                    + ". No target operation or worker spawned."
+                )
+                result = receipt("completed", 0, summary)
+                self.store.append(tid, "tool", name, "done", result["summary"])
+                return result
+            if tool.adapter == "sapper_frontier":
+                from app.sapper_integration import resolve_frontier, public_graph
+                frontier = resolve_frontier(tid, self.root)
+                if frontier["integrity"] == "uninitialized":
+                    summary = "Sapper-v2 task graph not initialized; zero dispatched intents."
+                else:
+                    graph = public_graph(tid, self.root)
+                    summary = (
+                        "Sapper-v2 graph integrity " + frontier["integrity"]
+                        + "; eligible intent IDs: "
+                        + (", ".join(frontier["ready_ids"][:12]) or "none")
+                        + "; sampled fact nodes " + str(graph["total_facts"])
+                        + "; sampled intent edges " + str(graph["total_intents"])
+                        + ". Read-only: no worker dispatched, no target contacted."
+                    )
+                result = receipt("completed", 0, summary)
                 self.store.append(tid, "tool", name, "done", result["summary"])
                 return result
             if tool.adapter == "lead_proposal":

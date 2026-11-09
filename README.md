@@ -1,8 +1,28 @@
-# SECRA — Local-first Agentic VAPT Operations
+# SECRA — Unified Local-first Security Research Agent
 
-A local-first, scoped VAPT operations MVP with a reviewed gateway, encrypted evidence, a bounded model-to-tool loop, a localhost MCP/agent console, synthetic offline demo, pinned Sapper-v2 graph memory and an optional privacy-controlled 9Router model connection.
+A local-first, operator-authorized security research platform for VAPT, bug bounty, CTF, code review and forensic work. It includes a reviewed MCP gateway, encrypted evidence, bounded model-to-tool workflows, a localhost operator console, optional 9Router model selection and the pinned Sapper-v2 fact-intent graph.
 
-**Current scope:** single IPv4 target per engagement, top-20 TCP ports via Nmap, optional curl HTTP header checks, and advisory-only LLM analysis. **No automatic exploitation or confirmed vulnerability claims.** Demo results are clearly labeled SIMULATED. Never expose this single-user MVP directly to the internet.
+**Current live network scope:** single IPv4 target per engagement, top-20 TCP ports via Nmap, optional curl HTTP header checks, and advisory-only LLM analysis. Offline evidence-only engagements and local artifact analysis are supported separately. **No automatic exploitation or confirmed vulnerability claims.** Demo results are clearly labeled SIMULATED. Never expose this single-user MVP directly to the internet.
+
+## Unified single-command OpenCode v2 interface (post-v0.7)
+
+**After a one-time global install**, launch every supported SECRA workflow with exactly one command: `secra`. The new primary `secra` agent chooses the correct task type (VAPT, bug bounty, CTF, audit, cloud/mobile, or forensics), then delegates to restricted analysis specialists. Legacy `secra-vapt`, `secra-bounty`, and `secra-ctf` profiles remain installed only for backward compatibility; you need not select them. Current provider/model settings are not changed.
+
+```bash
+REPO="$HOME/.local/share/secra/repo"
+python3 "$REPO/scripts/opencode_global.py" install --major 2 --replace --with-launcher
+python3 "$REPO/scripts/opencode_global.py" verify --major 2 --with-launcher
+# If ~/.local/bin is not already on your PATH, add it once in your shell settings.
+secra
+```
+
+The new launcher is a small user-owned script at `~/.local/bin/secra`. It opens `opencode --agent secra` without changing the working directory. The installer **refuses to overwrite an unrelated existing `secra` command**, even with `--replace`. No root permissions or provider changes are required to install the launcher.
+
+Five **additional GitHub repositories with 500+ verified stars** provide 18 *optional, hand-reviewed* knowledge skills: Cloudflare security audit, Anthropic cybersecurity knowledge, reverse-skill, Superpowers and planning-with-files. Total curated catalog: **35 first-party + 56 optional external = 91**; global agent profiles: **28**. Installing all external knowledge still requires reviewing sources and explicit opt-in.
+
+Sapper-v2 is **already vendored and partially integrated** for graph facts/intents. Two new MCP operations, `workflow.graph_initialize` (create private per-task graph) and `workflow.graph_frontier` (read its validated ready-intent IDs), expose the actual Sapper CLI safely to the unified agent. They do not start tmux workers, competition arena APIs, or arbitrary network tools. MCP catalog: **20 entries**, of which six new artifact-analysis tools execute real local binaries. No new live network scanner is implied.
+
+See [docs/SECRA-UNIFIED-KALI.md](docs/SECRA-UNIFIED-KALI.md) for global setup, source provenance, skill licenses, Sapper limits and real-lab verification.
 
 ## New agent console and MCP integration (developer preview)
 
@@ -32,7 +52,7 @@ python -m app.mcp.server --transport http --port 8766
 
 For stdio, let a trusted MCP client spawn the process and speak protocol over stdin/stdout (do not type interactive shell commands into it). For Streamable HTTP, use `http://127.0.0.1:8766/mcp` with `Authorization: Bearer $SECRA_DASHBOARD_TOKEN`; remote exposure, DNS-rebinding origins, and missing tokens are blocked. MCP tool schemas are exact manifest JSON Schemas. Outputs are `{status, exit_code, summary, output_ref, masked}`. `output_ref` is an `evidence://<engagement UUID>/<run UUID>` local reference—not an outbound download URL.
 
-Reviewed tools currently advertised (**18 total, including six real read-only Kali artifact adapters**): `inventory.read` (R0); `demo.nmap_scan` (R0, offline); `demo.httpx_probe` (R0, offline); `report.summary` (R0, offline); `local.http_head` (R2, real loopback-only HEAD); `nmap.tcp_top20` (R2, live gateway); `curl.http_head` (R2, live gateway); `http.authenticated_test` (R3, approval queue only); `prohibited.r4` (R4, always blocked); and `workflow.handoff` (R0, read-only sealed continuity checkpoint). `workflow.lead_propose` (R0, unverified, sanitized hypothesis proposal only). `workflow.capabilities` (R0, offline mode-aware readiness; never attests the kernel fence). Six read-only local artifact tools (R1): `artifact.sha256`, `artifact.file_type`, `artifact.strings`, `artifact.elf_header`, `artifact.object_summary`, and `artifact.metadata`. Add a new tool through an independently reviewed manifest entry and adapter stub. Agents cannot directly run arbitrary argv, install templates, use shells, or bypass the existing typed gateway.
+Reviewed tools currently advertised (**20 total, including six real read-only Kali artifact adapters and two Sapper graph operations**): `inventory.read` (R0); `demo.nmap_scan` (R0, offline); `demo.httpx_probe` (R0, offline); `report.summary` (R0, offline); `local.http_head` (R2, real loopback-only HEAD); `nmap.tcp_top20` (R2, live gateway); `curl.http_head` (R2, live gateway); `http.authenticated_test` (R3, approval queue only); `prohibited.r4` (R4, always blocked); and `workflow.handoff` (R0, read-only sealed continuity checkpoint). `workflow.lead_propose` (R0, unverified, sanitized hypothesis proposal only). `workflow.capabilities` (R0, offline mode-aware readiness; never attests the kernel fence). `workflow.graph_initialize` (R0 local graph creation) and `workflow.graph_frontier` (R0 read-only Sapper dependency status). Six read-only local artifact tools (R1): `artifact.sha256`, `artifact.file_type`, `artifact.strings`, `artifact.elf_header`, `artifact.object_summary`, and `artifact.metadata`. Add a new tool through an independently reviewed manifest entry and adapter stub. Agents cannot directly run arbitrary argv, install templates, use shells, or bypass the existing typed gateway.
 
 The agent loop is bounded to **25 tool steps and 20 minutes**; a stopped, refused or exhausted task cannot silently restart. Every selected tool and masked result is written to a sequenced local event ledger. R3 approvals are review-only until a separate audited adapter is installed, and R4 stays forbidden. The existing gateway still denies live network operations **until a real Kali kernel egress attestation is present**. The real local-loopback HEAD route is implemented and tested with a fake 9Router response and a genuine localhost HTTP server, but **no live 9Router model credentials or actual provider response were available for verification**. Genuine Kali Nmap/curl execution also remains gated by kernel attestation.
 
@@ -50,9 +70,9 @@ New `scripts/secra_har_import.py` accepts owner-only HAR exports from an operato
 
 ## SECRA v0.7: expanded Kali knowledge, agents and executive reporting
 
-The global OpenCode v2 inventory now comprises **35 first-party reviewed skills**, **38 optional third-party document-only skills** (Claude-Red, CTF Skills, Trail of Bits and secskills), and **27 specialist/primary agent profiles**. The installer upgrades only SECRA-managed files when the operator uses `--replace`; external sources require commit/license review.
+The global OpenCode v2 inventory now comprises **35 first-party reviewed skills**, **56 optional third-party document-only skills** (Claude-Red, CTF Skills, Trail of Bits and secskills), and **28 specialist/primary agent profiles**. The installer upgrades only SECRA-managed files when the operator uses `--replace`; external sources require commit/license review.
 
-**18 MCP manifest tools** include six new **real, read-only local file inspection** tools: `artifact.sha256`, `artifact.file_type`, `artifact.strings`, `artifact.elf_header`, `artifact.object_summary` and `artifact.metadata`. They run actual Kali binaries where installed on operator-approved local artifacts under the engagement's private analysis-input folder, and return sanitized metadata while sealing raw output into the local evidence vault. They do not open sockets or grant arbitrary shell.
+**20 MCP manifest tools** include six new **real, read-only local file inspection** tools: `artifact.sha256`, `artifact.file_type`, `artifact.strings`, `artifact.elf_header`, `artifact.object_summary` and `artifact.metadata`. They run actual Kali binaries where installed on operator-approved local artifacts under the engagement's private analysis-input folder, and return sanitized metadata while sealing raw output into the local evidence vault. They do not open sockets or grant arbitrary shell.
 
 The `scripts/secra_kali_tools.py` inventory covers 11 Kali tool categories and produces an explicit official apt install plan; any actual install requires local interactive approval. **Tool inventory is not the same as a reviewed executable MCP adapter**, and previously gated real network tools remain gated until Kali kernel-fence lab attestation.
 

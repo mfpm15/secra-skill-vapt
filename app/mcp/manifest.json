@@ -463,6 +463,46 @@
           "artifact"
         ]
       }
+    },
+    {
+      "name": "workflow.graph_frontier",
+      "description": "Read-only Sapper-v2 fact-intent graph frontier and validity for the current operator-authorized task; does not dispatch agents or authorize target execution.",
+      "risk": "R0",
+      "adapter": "sapper_frontier",
+      "mode": "both",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      }
+    },
+    {
+      "name": "workflow.graph_initialize",
+      "description": "Create the private per-task Sapper-v2 fact-intent graph for an existing authorized running engagement; local filesystem only, no worker spawn, no target requests.",
+      "risk": "R0",
+      "adapter": "sapper_initialize",
+      "mode": "both",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      }
     }
   ]
 }
