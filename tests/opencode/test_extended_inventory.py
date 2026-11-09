@@ -11,17 +11,19 @@ from scripts import secra_skill_sources
 from scripts import secra_kali_tools
 
 
-def test_seventy_three_curated_skill_ids_have_distinct_safe_sources():
+def test_ninety_one_curated_skill_ids_have_distinct_safe_sources():
     entries = list(opencode_security.FIRST_PARTY)
     externals = list(opencode_security.EXTERNAL)
     assert len(entries) == 35
-    assert len(externals) == 38
+    assert len(externals) == 56
     names = [x[1] for x in entries] + [x[2] for x in externals]
-    assert len(set(names)) == 73
+    assert len(set(names)) == 91
     assert all(x[1].startswith("secra-") for x in entries)
     assert all(x[2].startswith("secra-") for x in externals)
     assert {x[0] for x in externals} == {
-        "claude-red", "ctf-skills", "trailofbits-skills", "secskills"
+        "claude-red", "ctf-skills", "trailofbits-skills", "secskills",
+        "cloudflare-security", "anthropic-cyber", "reverse-skill",
+        "superpowers", "planning-with-files",
     }
     for path, skill_id, description in entries:
         assert (opencode_security.ROOT / path / "SKILL.md").is_file()
@@ -38,7 +40,7 @@ def test_21_previous_first_party_skills_now_have_evidence_v2_contract():
         assert "Required output" in body
 
 
-def test_all_38_external_refs_load_from_reviewed_fake_checkouts(tmp_path):
+def test_all_56_external_refs_load_from_reviewed_fake_checkouts(tmp_path):
     source_root = tmp_path / "sources"
     for repo_name, relative, skill_name, description in opencode_security.EXTERNAL:
         directory = source_root / repo_name / relative
@@ -60,7 +62,7 @@ def test_all_38_external_refs_load_from_reviewed_fake_checkouts(tmp_path):
     receipt = json.loads(
         (destination / opencode_security.MANIFEST_NAME).read_text()
     )
-    assert len(receipt["skills"]) == 73
+    assert len(receipt["skills"]) == 91
     assert (destination / "secra-ext-research-orchestration" / "SKILL.md").is_file()
     assert (destination / "secra-tob-differential-review" / "SKILL.md").is_file()
     for name in receipt["skills"]:
@@ -71,7 +73,7 @@ def test_all_38_external_refs_load_from_reviewed_fake_checkouts(tmp_path):
 def test_sources_bootstrap_dry_run_never_clones(tmp_path):
     root = tmp_path / "source-root"
     result = secra_skill_sources.prepare(root, apply=False)
-    assert len(result) == 4
+    assert len(result) == 9
     assert all(item["status"] == "dry_run_missing" for item in result)
     assert not root.exists()
 
