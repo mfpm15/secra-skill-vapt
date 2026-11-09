@@ -299,6 +299,11 @@ def main() -> int:
         launcher_path = args.launcher_dir.expanduser() / "secra"
         if args.with_launcher and args.launcher_dir.expanduser().is_symlink():
             raise ValueError("Launcher directory symlink not allowed")
+        if args.with_launcher:
+            try:
+                from scripts import secra_launcher
+            except ModuleNotFoundError:
+                import secra_launcher
         if destination.is_symlink() or learning.is_symlink():
             raise ValueError("Global install destination must not be a symlink")
         if args.with_external and (not args.reviewed_external or args.external_root is None):
@@ -309,14 +314,12 @@ def main() -> int:
             run_skills(destination, args)
             agents_verify(destination)
             if args.with_launcher:
-                from scripts.secra_launcher import verify as verify_launcher
-                verify_launcher(launcher_path)
+                secra_launcher.verify(launcher_path)
             return 0
         run_skills(destination, args)
         agents_install(destination, args.major, args.replace, args.dry_run)
         if args.with_launcher:
-            from scripts.secra_launcher import install as install_launcher
-            print(install_launcher(
+            print(secra_launcher.install(
                 launcher_path, replace=args.replace, dry_run=args.dry_run))
         if args.with_mcp:
             mcp_install(destination, args.major, args.dry_run)
