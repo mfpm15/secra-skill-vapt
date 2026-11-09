@@ -8,12 +8,63 @@ permissions:
   - action: read
     resource: "*"
     effect: allow
+  - action: read
+    resource: "*.env"
+    effect: ask
+  - action: read
+    resource: "*.env.*"
+    effect: ask
+  - action: read
+    resource: "*.env.example"
+    effect: allow
+  - action: read
+    resource: "*.pem"
+    effect: deny
+  - action: read
+    resource: "*.key"
+    effect: deny
+  - action: read
+    resource: "*.p12"
+    effect: deny
+  - action: read
+    resource: "*.pfx"
+    effect: deny
+  - action: read
+    resource: "*.ssh/*"
+    effect: deny
+  - action: read
+    resource: "*.aws/credentials"
+    effect: deny
+  - action: read
+    resource: "*.kube/config"
+    effect: deny
+  - action: read
+    resource: "*id_rsa*"
+    effect: deny
+  - action: read
+    resource: "*.git-credentials"
+    effect: deny
+  - action: read
+    resource: "*.npmrc"
+    effect: deny
+  - action: read
+    resource: "*.netrc"
+    effect: deny
+  - action: read
+    resource: "*.pypirc"
+    effect: deny
+  - action: read
+    resource: "*.docker/config.json"
+    effect: deny
+  - action: read
+    resource: "*opencode.json*"
+    effect: ask
   - action: glob
     resource: "*"
     effect: allow
   - action: grep
     resource: "*"
-    effect: allow
+    effect: ask
   - action: skill
     resource: "*"
     effect: allow

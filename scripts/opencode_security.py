@@ -64,7 +64,7 @@ EXTERNAL = (
     ("ctf-skills", "solve-challenge", "secra-ctf-triage", "CTF triage and routing reference for authorized competition challenges."),
     ("trailofbits-skills", "plugins/fp-check/skills/fp-check", "secra-tob-fp-check", "Systematic verification and rejection of false-positive security findings."),
     ("trailofbits-skills", "plugins/cvss-scoring/skills/cvss-scoring", "secra-tob-cvss", "Produce defensible CVSS scores for evidence-backed findings."),
-    ("trailofbits-skills", "plugins/static-analysis/skills/static-analysis", "secra-tob-static-analysis", "Security-focused static analysis and result triage."),
+    ("trailofbits-skills", "plugins/static-analysis/skills/semgrep", "secra-tob-static-analysis", "Semgrep static analysis reference; upstream executable scripts are not bundled by SECRA."),
     ("trailofbits-skills", "plugins/audit-context-building/skills/audit-context-building", "secra-tob-audit-context", "Build security-relevant source context for code audits."),
 )
 
