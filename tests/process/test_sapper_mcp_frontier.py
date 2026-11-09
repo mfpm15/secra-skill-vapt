@@ -21,7 +21,7 @@ def test_sapper_frontier_metadata_only_before_and_after_initialized_graph(tmp_pa
     assert "not initialized" in empty["summary"]
     created = dispatcher.call("workflow.graph_initialize", {"task_id": tid})
     assert created["status"] == "completed"
-    assert "No target" not in created["summary"]
+    assert "No target operation or worker spawned" in created["summary"]
     anchor = initialize_graph(tid, tmp_path)  # Idempotent on the same real graph
     intent = stage_begin(tid, tmp_path, "Review Web", anchor)
     active = dispatcher.call("workflow.graph_frontier", {"task_id": tid})
