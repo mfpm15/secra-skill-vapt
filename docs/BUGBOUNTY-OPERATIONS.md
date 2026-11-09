@@ -104,6 +104,23 @@ python3 "$REPO/scripts/secra_evidence_task.py" \
 # Note the printed task_id, then use it for the authorized HAR import below.
 ~~~
 
+When the review is complete and **before creating an encrypted case bundle**, explicitly close the evidence-only task. Use the task UUID returned by the previous command:
+
+~~~bash
+REPO="$HOME/.local/share/secra/repo"
+TASK_ID="YOUR-OFFLINE-EVIDENCE-TASK-UUID"
+
+python3 "$REPO/scripts/secra_evidence_task.py" \
+  --finish-task-id "$TASK_ID" --confirm-completion
+
+python3 "$REPO/scripts/secra_workspace.py" manifest --task-id "$TASK_ID"
+python3 "$REPO/scripts/secra_case_bundle.py" export \
+  --task-id "$TASK_ID" \
+  --bundle "$HOME/private-offline-evidence.secra-case"
+~~~
+
+Only an active offline evidence task can be closed this way. Existing VAPT/CTF task modes are not changed by this command. Closing records a local UTC phase event; it does not independently verify any finding.
+
 The operator must read the current program brief first. The later HAR importer requires the exact approved hostname(s), and only retains entries matching those names. This task does not create any DNS authorization, alter a bug bounty program's scope, or permit automated requests. You can still use OpenCode for knowledge, hypothesis planning, case handoff and reporting, without exposing a fictional IP to the model.
 
 ## 5. Real HTTP evidence import (operator-captured HAR, no simulator)
