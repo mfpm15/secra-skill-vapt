@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
+import platform
 import json
 import os
 import shutil
@@ -204,6 +205,38 @@ class WorkspaceManager:
             os.fsync(stream.fileno())
         return payload
 
+    def capture_preflight(self, tid: str) -> dict:
+        """Record an offline inventory at task creation; no sockets or subprocess.
+
+        Route/VPN checks are intentionally pending until the operator validates
+        them for an authorized target in the Kali environment.
+        """
+        directory = self.require(tid)
+        filename = directory / "00-preflight/local-readiness.json"
+        if filename.is_symlink():
+            raise WorkspaceError("WORKSPACE_PREFLIGHT_SYMLINK")
+        if filename.exists():
+            return json.loads(filename.read_text(encoding="utf-8"))
+        available = {}
+        for command in (
+                "nmap", "httpx", "ffuf", "curl", "whatweb", "nuclei",
+                "dig", "sslscan", "gdb", "readelf", "tshark", "python3"):
+            available[command] = shutil.which(command) is not None
+        payload = {
+            "schema": 1,
+            "captured_at_utc": utc_now(),
+            "tool_presence_only": available,
+            "os": platform.system(),
+            "python": platform.python_version(),
+            "route_validation": "not_performed",
+            "vpn_validation": "not_performed",
+            "network_connections": 0,
+            "note": "Tools are not executed. Presence does not imply readiness or authorization.",
+        }
+        _write_new(filename, json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        self.record_phase(tid, "preflight", "started")
+        return payload
+
     def phases(self, tid: str) -> list[dict]:
         path = self.require(tid) / "06-ledger/phases.jsonl"
         if path.is_symlink():
@@ -304,7 +337,6 @@ class WorkspaceManager:
                 raise WorkspaceError("WORKSPACE_ARCHIVE_SYMLINK")
             os.chmod(path, 0o700 if path.is_dir() else 0o600)
         os.chmod(dest, 0o700)
-        replica = WorkspaceManager(dest.parent)
         # The destination name may be a user-selected archive name, not a UUID.
         expected = {x["path"]: (x["sha256"], x["size"]) for x in self.files(tid)}
         copied = {}
