@@ -45,7 +45,14 @@ def build_handoff(store: TaskStore, task_id: str) -> dict:
     incomplete = [r for r in runs if r["finished_at"] is None]
     counts = Counter(r["tool"] for r in runs)
     duplicate = sum(count - 1 for count in counts.values() if count > 1)
-    last_event = events[-1] if events else None
+    events_truncated = len(events) >= 2000
+    last_event = events[-1] if events and not events_truncated else None
+    audited_tool_events = [
+        e for e in events if e["kind"] == "tool" and e["tool"] != "workflow.handoff"
+    ]
+    # Older tasks have the pre-v0.3 events ledger but no per-invocation audit.
+    # Mark coverage uncertain rather than calling those tool operations zero.
+    uninstrumented_events = max(0, len(audited_tool_events) - len(runs))
     recorded_refs = [r["output_ref"] for r in successful if r["output_ref"]]
 
     # Private target/scope are intentionally ignored; a boolean is sufficient.
@@ -59,12 +66,16 @@ def build_handoff(store: TaskStore, task_id: str) -> dict:
         "generated_at_utc": store.utc_now(),
         "source": "local-sqlite-live-events-and-tool-runs",
         "events_count_in_window": len(events),
-        "events_window_truncated": len(events) >= 2000,
+        "events_window_truncated": events_truncated,
         "last_event": ({"seq": last_event["seq"], "kind": last_event["kind"],
                         "status": last_event["status"], "stamp": last_event["stamp"]}
                        if last_event else None),
         "metrics": {
             "tool_invocations_in_window": len(runs),
+            "audit_coverage": ("incomplete_or_unknown"
+                               if uninstrumented_events or events_truncated
+                               else "complete_for_recorded_tool_events"),
+            "possible_legacy_uninstrumented_tool_events": uninstrumented_events,
             "successful_receipts": len(successful),
             "blocked_or_denied_receipts": len(failed),
             "incomplete_audit_records": len(incomplete),
@@ -96,6 +107,7 @@ def build_handoff(store: TaskStore, task_id: str) -> dict:
             "next_action": "Operator/analyst reviews the latest evidence references and selects the next approved action.",
             "missing": [
                 "Independent verification of suspected findings",
+                "Review incomplete historical tool audit" if uninstrumented_events or events_truncated else "No legacy tool-audit gaps detected in event window",
                 "Explicit hypothesis/negative-lead notes",
                 "Cleanup proof and operator sign-off",
             ],
