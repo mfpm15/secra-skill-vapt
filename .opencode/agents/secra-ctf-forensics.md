@@ -41,6 +41,24 @@ permissions:
   - action: read
     resource: "*id_rsa*"
     effect: deny
+  - action: read
+    resource: "*.git-credentials"
+    effect: deny
+  - action: read
+    resource: "*.npmrc"
+    effect: deny
+  - action: read
+    resource: "*.netrc"
+    effect: deny
+  - action: read
+    resource: "*.pypirc"
+    effect: deny
+  - action: read
+    resource: "*.docker/config.json"
+    effect: deny
+  - action: read
+    resource: "*opencode.json*"
+    effect: ask
   - action: glob
     resource: "*"
     effect: allow
