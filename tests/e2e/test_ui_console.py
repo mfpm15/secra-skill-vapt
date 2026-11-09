@@ -174,3 +174,15 @@ def test_python_m_app_serves_localhost(tmp_path):
         except subprocess.TimeoutExpired:
             process.kill()
             process.communicate(timeout=3)
+
+
+def test_workspace_controls_exist_without_js_target_autofill(tmp_path, monkeypatch):
+    client, _ = build_client(tmp_path, monkeypatch)
+    html = client.get("/").text
+    for item in ("workspace-refresh", "workspace-manifest",
+                 "workspace-verify", "workspace-handoff", "workspace-output"):
+        assert 'id="' + item + '"' in html
+    # Switching mode must not silently change operator-provided scope.
+    assert '$("target").value=' not in html
+    assert '$("scope").value=' not in html
+    assert "workspaceAction" in html
