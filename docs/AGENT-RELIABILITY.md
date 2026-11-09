@@ -81,6 +81,19 @@ Existing live tool approval, scope and kernel checks remain independent of this 
 
 For comparing GPT-5.6 Thinker or other models, use identical isolated labs or official CTF environments, identical initial state, approved tools and time budgets, and independent grading. Report success against actual ground truth, evidence completeness, wrong-mode actions, rejected calls, model latency and repeat-work ratios. Current backend CI cannot prove general model superiority or real Kali live readiness.
 
+## One-command isolated end-to-end smoke
+
+After updating the Kali checkout, this checks the full safe control plane without requiring a model API key or connecting to a target:
+
+~~~bash
+REPO="$HOME/.local/share/secra/repo"
+"$REPO/.venv/bin/python" "$REPO/scripts/secra_smoke.py"
+~~~
+
+Expected output states: preflight completed, hypothesis proposal completed, AgentLoop completed with two simulated tool steps, handoff completed, and evidence integrity integrity_ok. The script uses a fresh temporary demo task and deletes it on exit. This **does not** test real GPT-5.6 inference, CTF success, kernel egress attestation or live target coverage.
+
+The SQLite tool-run audit also enforces fixed backend limits (2,000 invocations per task, 400 per tool), independently from OpenCode and the AgentLoop 25-step planning limit. Exceeding limits blocks new calls; restarting a model does not replenish the budget. Operators should create a new authorized engagement rather than disabling safeguards.
+
 ## Offline regression
 
 ~~~bash
