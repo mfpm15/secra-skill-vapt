@@ -506,7 +506,7 @@
     },
     {
       "name": "workflow.plan_preview",
-      "description": "ARES-inspired offline preview of up to 8 reviewed MCP tool IDs; rejects unsupported, gated, and unapproved steps. Never executes any stage or attests scope or kernel fence.",
+      "description": "Preview up to 8 reviewed MCP tool IDs or a fixed offline goal template. No execution, approval, scope attestation or network access.",
       "risk": "R0",
       "adapter": "plan_preview",
       "mode": "both",
@@ -529,11 +529,32 @@
               "maxLength": 100,
               "pattern": "^[A-Za-z0-9_.-]{1,100}$"
             }
+          },
+          "goal": {
+            "type": "string",
+            "enum": [
+              "engagement_overview",
+              "demo_web_baseline",
+              "artifact_triage",
+              "sapper_graph_review",
+              "live_recon_review"
+            ]
           }
         },
         "required": [
-          "task_id",
-          "steps"
+          "task_id"
+        ],
+        "oneOf": [
+          {
+            "required": [
+              "steps"
+            ]
+          },
+          {
+            "required": [
+              "goal"
+            ]
+          }
         ]
       }
     }
