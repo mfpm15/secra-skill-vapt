@@ -35,7 +35,7 @@ export PATH="$HOME/.local/bin:$PATH"
 secra
 ~~~
 
-Installation creates a user-owned ~/.local/bin/secra executable (no sudo), and backs up/replaces only previously SECRA-managed agents/skills. It refuses to overwrite an unrelated pre-existing executable. No default provider, model, reasoning profile or global OpenCode configuration is replaced. Put the PATH export in your own shell startup file if you want it available in every terminal. An alternative that needs no launcher/PATH configuration is: opencode mini --agent secra.
+Installation creates a user-owned ~/.local/bin/secra executable (no sudo), and backs up/replaces only previously SECRA-managed agents/skills. It refuses to overwrite an unrelated pre-existing executable. No default provider, model, reasoning profile or global OpenCode configuration is replaced. Put the PATH export in your own shell startup file if you want it available in every terminal. The managed `secra` launcher opens the normal full-screen `opencode` TUI with a process-scoped `default_agent=secra` override, without altering global provider/model configuration. Alternatively, run `opencode` and choose `secra` using `/agents`.
 
 ## 2. Five researched GitHub sources above 500 stars
 
