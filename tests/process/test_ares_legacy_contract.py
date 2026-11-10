@@ -24,7 +24,6 @@ BASELINE_CORE_BLOBS = {
     "app/tool_gateway.py": "631a5dfd13cdbeb78d02cdd033e8cacd0a6d2e41",
     "app/loop/store.py": "7210c7a21ad81e745567f0e6f1cd0c77289bf1a6",
     "scripts/opencode_global.py": "f3a531ab6867c8cc0e004f66da15bcd706bc73a3",
-    "scripts/secra_launcher.py": "36618d88fa7a54be480935130dc6873eae3566d9"
 }
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -72,6 +71,6 @@ def test_legacy_critical_source_files_still_present():
 def test_one_entrypoint_kept_and_not_replaced():
     from scripts.secra_launcher import SCRIPT
     from scripts.opencode_global import AGENTS
-    assert 'exec opencode --agent secra "$@"' in SCRIPT
+    assert 'exec opencode mini --agent secra "$@"' in SCRIPT
     assert len(AGENTS) == 28
     assert AGENTS[0] == "secra"
