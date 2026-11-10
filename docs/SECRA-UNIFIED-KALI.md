@@ -35,7 +35,7 @@ export PATH="$HOME/.local/bin:$PATH"
 secra
 ~~~
 
-Installation creates a user-owned ~/.local/bin/secra executable (no sudo), and backs up/replaces only previously SECRA-managed agents/skills. It refuses to overwrite an unrelated pre-existing executable. No default provider, model, reasoning profile or global OpenCode configuration is replaced. Put the PATH export in your own shell startup file if you want it available in every terminal. An alternative that needs no launcher/PATH configuration is: opencode --agent secra.
+Installation creates a user-owned ~/.local/bin/secra executable (no sudo), and backs up/replaces only previously SECRA-managed agents/skills. It refuses to overwrite an unrelated pre-existing executable. No default provider, model, reasoning profile or global OpenCode configuration is replaced. Put the PATH export in your own shell startup file if you want it available in every terminal. An alternative that needs no launcher/PATH configuration is: opencode mini --agent secra.
 
 ## 2. Five researched GitHub sources above 500 stars
 
@@ -105,7 +105,7 @@ References: [N1nEmAn/sapper-v2](https://github.com/N1nEmAn/sapper-v2), [Nüwa fo
 ~~~bash
 REPO="$HOME/.local/share/secra/repo"
 python3 "$REPO/scripts/opencode_global.py" verify --major 2 --with-launcher
-opencode agent list
+opencode debug agents
 opencode mcp list
 
 cd "$REPO"
