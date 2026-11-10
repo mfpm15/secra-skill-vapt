@@ -114,3 +114,45 @@ def test_unmanaged_global_secra_profile_cannot_receive_managed_launcher(tmp_path
     assert "not installed and verified" in run.stderr
     assert "operator-owned" in existing.read_text()
     assert not (launcher / "secra").exists()
+
+
+def test_migrates_old_managed_v1_launcher_to_opencode_v2_mini(tmp_path):
+    """The actual v0.7 user-owned launcher can be upgraded without a new CLI."""
+    script = tmp_path / "bin" / "secra"
+    script.parent.mkdir(parents=True)
+    old_script = secra_launcher.SCRIPT.replace(
+        'exec opencode mini --agent secra "$@"',
+        'exec opencode --agent secra "$@"',
+    )
+    script.write_text(old_script)
+    script.chmod(0o700)
+    assert secra_launcher.MARKER in old_script
+    assert old_script != secra_launcher.SCRIPT
+    with pytest.raises(secra_launcher.LauncherError):
+        secra_launcher.install(script, replace=False)
+    result = secra_launcher.install(script, replace=True)
+    assert result.startswith("INSTALLED")
+    secra_launcher.verify(script)
+    saved = script.parent / "secra.secra-previous"
+    assert saved.read_text() == old_script
+    assert saved.stat().st_mode & 0o777 == 0o600
+
+
+def test_launcher_invocation_works_with_opencode_v2_root_agent_rejected(tmp_path):
+    """Simulate the actual v2 parsing regression, not only argv forwarding."""
+    script = tmp_path / "bin" / "secra"
+    secra_launcher.install(script)
+    system = tmp_path / "fake-bin"
+    system.mkdir()
+    opencode = system / "opencode"
+    opencode.write_text(
+        "#!/bin/sh\\n"
+        'if [ "$1" = "--agent" ]; then echo "Unrecognized flag" >&2; exit 2; fi\\n'
+        'if [ "$1" = "mini" ] && [ "$2" = "--agent" ] && [ "$3" = "secra" ]; then exit 0; fi\\n'
+        "exit 3\\n"
+    )
+    opencode.chmod(0o700)
+    env = {**os.environ, "PATH": str(system) + os.pathsep + os.environ["PATH"]}
+    assert subprocess.run([str(script)], env=env, capture_output=True).returncode == 0
+    assert subprocess.run([str(opencode), "--agent", "secra"],
+                          env=env, capture_output=True).returncode == 2
