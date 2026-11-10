@@ -8,7 +8,7 @@ import pytest
 
 from app.loop.store import TaskStore
 from app.mcp.dispatcher import ToolDispatcher
-from app.planning.preview import PlanError, preview_plan, short_preview
+from app.planning.preview import PlanError, goal_steps, preview_plan, short_preview
 
 
 def setup_task(tmp_path, mode="demo", start=True):
@@ -129,3 +129,42 @@ def test_read_only_preflight_before_task_start_and_after_completion(tmp_path):
     })
     assert result["status"] == "completed"
     assert "blocked" in result["summary"]
+
+
+def test_fixed_goal_templates_use_reviewed_manifest_names(tmp_path):
+    store, tid, dispatcher = setup_task(tmp_path, "demo")
+    for goal in ("engagement_overview", "demo_web_baseline",
+                 "artifact_triage", "sapper_graph_review", "live_recon_review"):
+        steps = goal_steps(goal)
+        assert 1 <= len(steps) <= 8
+        assert all(name in dispatcher.manifest.tools for name in steps)
+        result = preview_plan(store, dispatcher.manifest, tid, steps)
+        assert result["execution_authorized"] is False
+        assert result["tool_calls_performed"] == 0
+    with pytest.raises(PlanError):
+        goal_steps("domain_admin_shell")
+
+
+def test_goal_template_mcp_can_only_preview_one_goal_or_steps(tmp_path):
+    store, tid, dispatcher = setup_task(tmp_path, "demo")
+    result = dispatcher.call("workflow.plan_preview", {
+        "task_id": tid, "goal": "demo_web_baseline",
+    })
+    assert result["status"] == "completed"
+    assert "demo.nmap_scan=simulation_candidate" in result["summary"]
+    assert "0 tools executed" in result["summary"]
+    result = dispatcher.call("workflow.plan_preview", {
+        "task_id": tid, "goal": "live_recon_review",
+    })
+    assert result["status"] == "completed"
+    assert "nmap.tcp_top20=blocked" in result["summary"]
+    assert dispatcher.call("workflow.plan_preview", {
+        "task_id": tid, "goal": "unknown",
+    })["status"] == "denied"
+    assert dispatcher.call("workflow.plan_preview", {
+        "task_id": tid, "goal": "demo_web_baseline",
+        "steps": ["inventory.read"],
+    })["status"] == "denied"
+    assert dispatcher.call("workflow.plan_preview", {
+        "task_id": tid,
+    })["status"] == "denied"
