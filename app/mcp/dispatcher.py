@@ -107,8 +107,9 @@ class ToolDispatcher:
             return receipt("cancelled", None, "Operator stopped the task.")
         try:
             if tool.adapter == "plan_preview":
-                from app.planning.preview import preview_plan, short_preview
-                report = preview_plan(self.store, self.manifest, tid, args["steps"])
+                from app.planning.preview import goal_steps, preview_plan, short_preview
+                steps = args["steps"] if "steps" in args else goal_steps(args["goal"])
+                report = preview_plan(self.store, self.manifest, tid, steps)
                 result = receipt("completed", 0, short_preview(report))
                 self.store.append(tid, "tool", name, "done", result["summary"])
                 return result
