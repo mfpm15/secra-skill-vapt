@@ -12,15 +12,9 @@ import tempfile
 from pathlib import Path
 
 MARKER = "# SECRA_MANAGED_OPENCODE_LAUNCHER_V1"
-SCRIPT = (
-    "#!/bin/sh\n" + MARKER + "\n"
-    "if ! command -v opencode >/dev/null 2>&1; then\n"
-    "  printf 'SECRA: OpenCode executable not found in PATH.\\n' >&2\n"
-    "  exit 127\n"
-    "fi\n"
-    'exec opencode mini --agent secra "$@"\n'
-)
-
+LEGACY_V1_SCRIPT = "#!/bin/sh\n# SECRA_MANAGED_OPENCODE_LAUNCHER_V1\nif ! command -v opencode >/dev/null 2>&1; then\n  printf 'SECRA: OpenCode executable not found in PATH.\\n' >&2\n  exit 127\nfi\nexec opencode --agent secra \"$@\"\n"
+LEGACY_MINI_SCRIPT = "#!/bin/sh\n# SECRA_MANAGED_OPENCODE_LAUNCHER_V1\nif ! command -v opencode >/dev/null 2>&1; then\n  printf 'SECRA: OpenCode executable not found in PATH.\\n' >&2\n  exit 127\nfi\nexec opencode mini --agent secra \"$@\"\n"
+SCRIPT = "#!/bin/sh\n# SECRA_MANAGED_OPENCODE_LAUNCHER_V1\nif ! command -v opencode >/dev/null 2>&1; then\n  printf 'SECRA: OpenCode executable not found in PATH.\\n' >&2\n  exit 127\nfi\n# OpenCode v2 full TUI does not accept --agent. Choose SECRA only for\n# this child process; preserve provider/model and any existing inline config.\nif [ \"${OPENCODE_CONFIG_CONTENT+x}\" = x ]; then\n  if ! command -v python3 >/dev/null 2>&1; then\n    printf 'SECRA: python3 required to preserve inline OpenCode configuration.\\n' >&2\n    exit 2\n  fi\n  OPENCODE_CONFIG_CONTENT=\"$(python3 -c 'import json, os; cfg=json.loads(os.environ[\"OPENCODE_CONFIG_CONTENT\"]);\nif not isinstance(cfg, dict): raise ValueError(\"Invalid inline config\");\ncfg[\"default_agent\"]=\"secra\"; print(json.dumps(cfg))')\" || exit 2\nelse\n  OPENCODE_CONFIG_CONTENT='{\"default_agent\":\"secra\"}'\nfi\nexport OPENCODE_CONFIG_CONTENT\nexec opencode \"$@\"\n"
 
 class LauncherError(ValueError):
     pass
