@@ -146,10 +146,10 @@ def test_launcher_invocation_works_with_opencode_v2_root_agent_rejected(tmp_path
     system.mkdir()
     opencode = system / "opencode"
     opencode.write_text(
-        "#!/bin/sh\\n"
-        'if [ "$1" = "--agent" ]; then echo "Unrecognized flag" >&2; exit 2; fi\\n'
-        'if [ "$1" = "mini" ] && [ "$2" = "--agent" ] && [ "$3" = "secra" ]; then exit 0; fi\\n'
-        "exit 3\\n"
+        "#!/bin/sh\n"
+        'if [ "$1" = "--agent" ]; then echo "Unrecognized flag" >&2; exit 2; fi\n'
+        'if [ "$1" = "mini" ] && [ "$2" = "--agent" ] && [ "$3" = "secra" ]; then exit 0; fi\n'
+        "exit 3\n"
     )
     opencode.chmod(0o700)
     env = {**os.environ, "PATH": str(system) + os.pathsep + os.environ["PATH"]}
