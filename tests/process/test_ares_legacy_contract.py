@@ -71,6 +71,10 @@ def test_legacy_critical_source_files_still_present():
 def test_one_entrypoint_kept_and_not_replaced():
     from scripts.secra_launcher import SCRIPT
     from scripts.opencode_global import AGENTS
-    assert 'exec opencode mini --agent secra "$@"' in SCRIPT
+    assert 'exec opencode "$@"' in SCRIPT
+    assert 'OPENCODE_CONFIG_CONTENT' in SCRIPT
+    assert 'default_agent' in SCRIPT
+    assert ' mini ' not in SCRIPT
+    assert 'opencode --agent' not in SCRIPT
     assert len(AGENTS) == 28
     assert AGENTS[0] == "secra"
