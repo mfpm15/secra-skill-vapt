@@ -133,9 +133,9 @@ Reference: https://wstg.owasp.org/stable/5-Reporting/README/
 ## OpenCode v2 coordinator usage
 
 ~~~bash
-opencode --agent secra-vapt
-opencode --agent secra-ctf
-opencode --agent secra-bounty
+opencode mini --agent secra-vapt
+opencode mini --agent secra-ctf
+opencode mini --agent secra-bounty
 opencode mcp list
 ~~~
 

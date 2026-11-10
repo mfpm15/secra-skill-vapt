@@ -2,7 +2,7 @@
 
 **Fokus: OpenCode v2, tanpa perlu masuk folder proyek ketika memakai agent.**
 
-Semua skills dan agent profile dipasang ke direktori pengguna `~/.config/opencode/`. Anda bisa menjalankan `opencode --agent secra-vapt` atau `opencode --agent secra-ctf` dari direktori kerja mana pun. Repo sumber tetap dibutuhkan untuk mengelola update dan menjalankan server MCP, tetapi **tidak perlu dijadikan current working directory**.
+Semua skills dan agent profile dipasang ke direktori pengguna `~/.config/opencode/`. Anda bisa menjalankan `opencode mini --agent secra-vapt` atau `opencode mini --agent secra-ctf` dari direktori kerja mana pun. Repo sumber tetap dibutuhkan untuk mengelola update dan menjalankan server MCP, tetapi **tidak perlu dijadikan current working directory**.
 
 Referensi resmi:
 - https://opencode.ai/docs/skills/
@@ -225,11 +225,11 @@ The integrity report verifies manifest drift, unfinished tool audit rows, and re
 
 ~~~bash
 cd /tmp
-opencode --agent secra-vapt
+opencode mini --agent secra-vapt
 
 # atau
 cd "$HOME"
-opencode --agent secra-ctf
+opencode mini --agent secra-ctf
 ~~~
 
 VAPT:

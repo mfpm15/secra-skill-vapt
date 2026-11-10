@@ -1,6 +1,7 @@
 """Single SECRA entry point: global v2 agent, safe launcher and legacy coexistence."""
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -66,7 +67,7 @@ def test_global_launcher_install_verify_and_invokes_opencode_with_secra(tmp_path
         capture_output=True, text=True, cwd="/tmp"
     )
     assert executed.returncode == 0
-    assert executed.stdout == "ARGS=--agent secra --version\n"
+    assert executed.stdout == "ARGS=--version\n"
     assert len(list((config / "agents").glob("*.md"))) == 28
 
 
@@ -114,3 +115,82 @@ def test_unmanaged_global_secra_profile_cannot_receive_managed_launcher(tmp_path
     assert "not installed and verified" in run.stderr
     assert "operator-owned" in existing.read_text()
     assert not (launcher / "secra").exists()
+
+
+@pytest.mark.parametrize("variant", ["v1", "mini"])
+def test_migrates_old_managed_launcher_to_full_tui(tmp_path, variant):
+    """Old managed SECRA scripts can upgrade while preserving original backup."""
+    script = tmp_path / "bin" / "secra"
+    script.parent.mkdir(parents=True)
+    old_script = (secra_launcher.LEGACY_V1_SCRIPT if variant == "v1"
+                  else secra_launcher.LEGACY_MINI_SCRIPT)
+    script.write_text(old_script)
+    script.chmod(0o700)
+    assert secra_launcher.MARKER in old_script
+    assert old_script != secra_launcher.SCRIPT
+    with pytest.raises(secra_launcher.LauncherError):
+        secra_launcher.install(script, replace=False)
+    result = secra_launcher.install(script, replace=True)
+    assert result.startswith("INSTALLED")
+    secra_launcher.verify(script)
+    saved = script.parent / "secra.secra-previous"
+    assert saved.read_text() == old_script
+    assert saved.stat().st_mode & 0o777 == 0o600
+
+
+def test_launcher_starts_full_screen_tui_with_scoped_secra_default(tmp_path):
+    """The V2 root command succeeds, but rejects the unsupported --agent flag."""
+    script = tmp_path / "bin" / "secra"
+    secra_launcher.install(script)
+    system = tmp_path / "fake-bin"
+    system.mkdir()
+    opencode = system / "opencode"
+    opencode.write_text(
+        "#!/bin/sh\n"
+        'if [ "$1" = "--agent" ]; then echo "Unrecognized flag" >&2; exit 2; fi\n'
+        'if [ "$1" = "mini" ]; then exit 3; fi\n'
+        'python3 -c "import json,os; c=json.loads(os.environ[\\\"OPENCODE_CONFIG_CONTENT\\\"]); assert c[\\\"default_agent\\\"]==\\\"secra\\\"" || exit 4\n'
+        "exit 0\n"
+    )
+    opencode.chmod(0o700)
+    env = {**os.environ, "PATH": str(system) + os.pathsep + os.environ["PATH"]}
+    env.pop("OPENCODE_CONFIG_CONTENT", None)
+    assert subprocess.run([str(script)], env=env, capture_output=True).returncode == 0
+    assert subprocess.run([str(opencode), "--agent", "secra"],
+                          env=env, capture_output=True).returncode == 2
+
+
+def test_launcher_preserves_inline_model_and_provider_config(tmp_path):
+    script = tmp_path / "bin" / "secra"
+    secra_launcher.install(script)
+    system = tmp_path / "fake-bin"
+    system.mkdir()
+    opencode = system / "opencode"
+    opencode.write_text(
+        '#!/bin/sh\n'
+        "python3 -c 'import json,os; c=json.loads(os.environ[\"OPENCODE_CONFIG_CONTENT\"]); "
+        'assert c["default_agent"]=="secra"; '
+        'assert c["model"]=="9router/current-model"; '
+        'assert c["provider"]["9router"]["timeout"]==123' + "'\n"
+    )
+    opencode.chmod(0o700)
+    env = {**os.environ, "PATH": str(system) + os.pathsep + os.environ["PATH"],
+           "OPENCODE_CONFIG_CONTENT": '{"model":"9router/current-model","provider":{"9router":{"timeout":123}},"default_agent":"build"}'}
+    execution = subprocess.run([str(script)], env=env, capture_output=True)
+    assert execution.returncode == 0, execution.stderr
+    assert "OPENCODE_CONFIG_CONTENT" in env
+    # Parent process unchanged: launcher config is scoped to the child.
+    assert json.loads(env["OPENCODE_CONFIG_CONTENT"])["default_agent"] == "build"
+
+
+def test_launcher_rejects_malformed_inline_config_without_falling_back(tmp_path):
+    script = tmp_path / "bin" / "secra"
+    secra_launcher.install(script)
+    system = tmp_path / "fake-bin"
+    system.mkdir()
+    opencode = system / "opencode"
+    opencode.write_text("#!/bin/sh\nexit 0\n")
+    opencode.chmod(0o700)
+    env = {**os.environ, "PATH": str(system) + os.pathsep + os.environ["PATH"],
+           "OPENCODE_CONFIG_CONTENT": "{bad-json"}
+    assert subprocess.run([str(script)], env=env, capture_output=True).returncode != 0

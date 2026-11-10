@@ -503,6 +503,60 @@
           "task_id"
         ]
       }
+    },
+    {
+      "name": "workflow.plan_preview",
+      "description": "Preview up to 8 reviewed MCP tool IDs or a fixed offline goal template. No execution, approval, scope attestation or network access.",
+      "risk": "R0",
+      "adapter": "plan_preview",
+      "mode": "both",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "steps": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[A-Za-z0-9_.-]{1,100}$"
+            }
+          },
+          "goal": {
+            "type": "string",
+            "enum": [
+              "engagement_overview",
+              "demo_web_baseline",
+              "artifact_triage",
+              "sapper_graph_review",
+              "live_recon_review"
+            ]
+          }
+        },
+        "required": [
+          "task_id"
+        ],
+        "oneOf": [
+          {
+            "required": [
+              "steps"
+            ]
+          },
+          {
+            "required": [
+              "goal"
+            ]
+          }
+        ]
+      }
     }
   ]
 }
