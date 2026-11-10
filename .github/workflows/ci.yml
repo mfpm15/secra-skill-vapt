@@ -24,6 +24,10 @@ jobs:
           SECRA_DASHBOARD_TOKEN: ci-local-process-token
           SECRA_DATA_DIR: /tmp/secra-process-test
         run: python -m pytest tests/process tests/continuity tests/workspace -q -ra
+      - name: Baseline compatibility and local upgrade checkpoint safety
+        run: python -m pytest tests/process/test_ares_legacy_contract.py tests/process/test_upgrade_checkpoint.py -q -ra
+      - name: Non-gating offline planning latency diagnostics (no target traffic)
+        run: python scripts/secra_plan_benchmark.py --iterations 200 --warmup 20
       - name: Phase 1 masking corpus and leakage acceptance tests (zero skipped)
         env:
           SECRA_DASHBOARD_TOKEN: ci-test-token-only
