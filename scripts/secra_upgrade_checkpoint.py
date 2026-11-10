@@ -121,6 +121,9 @@ def compare(previous: dict, current: dict) -> dict:
     if previous.get("launcher_sha256") is not None:
         ensure(current.get("launcher_sha256") is not None,
                "LAUNCHER_REMOVED")
+        if current.get("launcher_sha256") is not None:
+            ensure(current.get("launcher_sha256") == previous["launcher_sha256"],
+                   "LAUNCHER_CHANGED")
     for name, old_hash in previous.get("config_sha256", {}).items():
         if old_hash is not None:
             ensure(current.get("config_sha256", {}).get(name) == old_hash,
