@@ -21,22 +21,19 @@ SCHEMA = "secra-install-checkpoint-v1"
 
 
 def recognized_launcher_migration(previous_sha: str | None, current_sha: str | None) -> bool:
-    """Only exact, reviewed V1 -> OpenCode v2 mini replacement is allowlisted.
+    """Allow only exact, reviewed legacy SECRA launcher -> full-screen TUI.
 
-    No arbitrary changed executable can bypass the checkpoint comparison.
+    Arbitrary changed executables remain blocked by checkpoint comparison.
     """
     try:
-        from secra_launcher import SCRIPT
+        from secra_launcher import SCRIPT, LEGACY_V1_SCRIPT, LEGACY_MINI_SCRIPT
     except ImportError:
-        from scripts.secra_launcher import SCRIPT
-    old = SCRIPT.replace(
-        'exec opencode mini --agent secra "$@"',
-        'exec opencode --agent secra "$@"',
-    )
-    if old == SCRIPT:
-        return False
+        from scripts.secra_launcher import SCRIPT, LEGACY_V1_SCRIPT, LEGACY_MINI_SCRIPT
     return (
-        previous_sha == hashlib.sha256(old.encode("utf-8")).hexdigest()
+        previous_sha in {
+            hashlib.sha256(x.encode("utf-8")).hexdigest()
+            for x in (LEGACY_V1_SCRIPT, LEGACY_MINI_SCRIPT)
+        }
         and current_sha == hashlib.sha256(SCRIPT.encode("utf-8")).hexdigest()
     )
 
