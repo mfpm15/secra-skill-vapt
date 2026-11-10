@@ -66,7 +66,7 @@ def test_global_launcher_install_verify_and_invokes_opencode_with_secra(tmp_path
         capture_output=True, text=True, cwd="/tmp"
     )
     assert executed.returncode == 0
-    assert executed.stdout == "ARGS=--agent secra --version\n"
+    assert executed.stdout == "ARGS=mini --agent secra --version\n"
     assert len(list((config / "agents").glob("*.md"))) == 28
 
 
