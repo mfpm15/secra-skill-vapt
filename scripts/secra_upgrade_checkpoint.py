@@ -20,6 +20,27 @@ from pathlib import Path
 SCHEMA = "secra-install-checkpoint-v1"
 
 
+def recognized_launcher_migration(previous_sha: str | None, current_sha: str | None) -> bool:
+    """Only exact, reviewed V1 -> OpenCode v2 mini replacement is allowlisted.
+
+    No arbitrary changed executable can bypass the checkpoint comparison.
+    """
+    try:
+        from secra_launcher import SCRIPT
+    except ImportError:
+        from scripts.secra_launcher import SCRIPT
+    old = SCRIPT.replace(
+        'exec opencode mini --agent secra "$@"',
+        'exec opencode --agent secra "$@"',
+    )
+    if old == SCRIPT:
+        return False
+    return (
+        previous_sha == hashlib.sha256(old.encode("utf-8")).hexdigest()
+        and current_sha == hashlib.sha256(SCRIPT.encode("utf-8")).hexdigest()
+    )
+
+
 def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
@@ -118,12 +139,18 @@ def compare(previous: dict, current: dict) -> dict:
                   "vault_directory_present"):
         if previous.get(field) is True:
             ensure(current.get(field) is True, field.upper() + "_LOST")
+    launcher_migrated = recognized_launcher_migration(
+        previous.get("launcher_sha256"), current.get("launcher_sha256")
+    )
     if previous.get("launcher_sha256") is not None:
         ensure(current.get("launcher_sha256") is not None,
                "LAUNCHER_REMOVED")
         if current.get("launcher_sha256") is not None:
-            ensure(current.get("launcher_sha256") == previous["launcher_sha256"],
-                   "LAUNCHER_CHANGED")
+            ensure(
+                current.get("launcher_sha256") == previous["launcher_sha256"]
+                or launcher_migrated,
+                "LAUNCHER_CHANGED",
+            )
     for name, old_hash in previous.get("config_sha256", {}).items():
         if old_hash is not None:
             ensure(current.get("config_sha256", {}).get(name) == old_hash,
@@ -145,6 +172,7 @@ def compare(previous: dict, current: dict) -> dict:
         "current_agent_count": len(current.get("agents", [])),
         "previous_skill_count": len(previous.get("skills", [])),
         "current_skill_count": len(current.get("skills", [])),
+        "recognized_launcher_migration": launcher_migrated,
         "source_commit_changed": previous.get("repo_head") != current.get("repo_head"),
         "note": "Metadata comparison only; Kali functions, live fence and provider are NOT tested.",
     }
