@@ -31,14 +31,14 @@ def file_sha(path: Path) -> str | None:
     return _sha(path.read_bytes()) if path.is_file() else None
 
 
-def file_names(folder: Path, pattern: str) -> list[str]:
+def file_names(folder: Path, pattern: str, *, include_dirs: bool = False) -> list[str]:
     if folder.is_symlink():
         raise ValueError("CHECKPOINT_SYMLINK_DENIED")
     if not folder.is_dir():
         return []
     return sorted(
         p.name for p in folder.glob(pattern)
-        if p.is_file() and not p.is_symlink()
+        if (p.is_dir() if include_dirs else p.is_file()) and not p.is_symlink()
     )
 
 
@@ -98,7 +98,7 @@ def snapshot(repo: Path, config: Path, data: Path, launcher: Path) -> dict:
             for name in ("opencode.json", "opencode.jsonc")
         },
         "agents": file_names(config / "agents", "secra*.md"),
-        "skills": file_names(config / "skills", "secra-*"),
+        "skills": file_names(config / "skills", "secra-*", include_dirs=True),
         "tool_contract_sha256": tool_fingerprints(repo),
         "data_root_present": data.is_dir(),
         "task_database_present": (data / "agent-events.sqlite3").is_file(),
