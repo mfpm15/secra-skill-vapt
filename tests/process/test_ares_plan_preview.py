@@ -168,3 +168,32 @@ def test_goal_template_mcp_can_only_preview_one_goal_or_steps(tmp_path):
     assert dispatcher.call("workflow.plan_preview", {
         "task_id": tid,
     })["status"] == "denied"
+
+
+def test_long_unreviewed_step_does_not_echo_user_input_or_hide_denial(tmp_path):
+    store, tid, dispatcher = setup_task(tmp_path)
+    # Each candidate is syntactically valid but absent from the reviewed registry.
+    long_names = [f"unknown.{i}." + ("Z" * 88) for i in range(6)]
+    plan = preview_plan(store, dispatcher.manifest, tid, long_names)
+    summary = short_preview(plan)
+    assert plan["blocked_steps"] == 6
+    assert "blocked/rejected 6/6" in summary
+    assert "no execution authorization" in summary
+    assert all(s not in summary for s in long_names)
+    assert len(summary) <= 490
+    assert all(entry["tool"] == "UNREVIEWED" for entry in plan["steps"])
+
+
+def test_mixed_long_plan_always_reports_blocker_count(tmp_path):
+    store, tid, dispatcher = setup_task(tmp_path)
+    plan = preview_plan(store, dispatcher.manifest, tid, [
+        "inventory.read", "demo.nmap_scan", "workflow.capabilities",
+        "nmap.tcp_top20", "curl.http_head", "prohibited.r4",
+        "workflow.handoff", "artifact.sha256",
+    ])
+    summary = short_preview(plan)
+    assert "blocked/rejected " + str(plan["blocked_steps"]) + "/8" in summary
+    assert "OFFLINE PREVIEW ONLY" in summary
+    assert "fence NOT attested" in summary
+    assert "no execution authorization" in summary
+    assert len(summary) <= 490
