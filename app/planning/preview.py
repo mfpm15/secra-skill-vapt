@@ -89,7 +89,7 @@ def preview_plan(store: TaskStore, manifest: ToolManifest,
         tool = manifest.tools.get(name)
         if tool is None or name == "workflow.plan_preview":
             analyzed.append({
-                "step": index, "tool": name, "risk": None,
+                "step": index, "tool": "UNREVIEWED", "risk": None,
                 "exposure": "unreviewed", "classification": "unknown",
                 "verdict": "rejected", "reason": "tool_not_reviewed",
             })
@@ -124,12 +124,24 @@ def preview_plan(store: TaskStore, manifest: ToolManifest,
 
 
 def short_preview(result: dict) -> str:
-    """Model-safe, bounded explanation; no user content other than tool IDs."""
-    steps = "; ".join(
-        f"{x['step']}:{x['tool']}={x['verdict']}" for x in result["steps"]
-    )
-    return (
+    """Bounded operator-safe result: never hide the number of blocked steps.
+
+    The complete in-memory verdict is not an execution receipt. Unknown tool
+    IDs are anonymized, avoiding accidental model echo of arbitrary user data.
+    """
+    parts = [
+        f"{item['step']}:{item['tool']}={item['verdict']}"
+        for item in result["steps"]
+    ]
+    header = (
         "OFFLINE PREVIEW ONLY; 0 tools executed; fence NOT attested; "
         "no execution authorization. SECRA " + result["plan_verdict"]
-        + ": " + steps
-    )[:490]
+        + "; blocked/rejected " + str(result["blocked_steps"])
+        + "/" + str(len(result["steps"])) + ": "
+    )
+    # Reserve footer for a future truncated long plan.
+    budget = max(0, 490 - len(header))
+    items = "; ".join(parts)
+    if len(items) > budget:
+        items = items[:max(0, budget - 12)].rstrip("; ") + "; [TRUNCATED]"
+    return (header + items)[:490]
