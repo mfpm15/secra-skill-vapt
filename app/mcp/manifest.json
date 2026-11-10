@@ -503,6 +503,39 @@
           "task_id"
         ]
       }
+    },
+    {
+      "name": "workflow.plan_preview",
+      "description": "ARES-inspired offline preview of up to 8 reviewed MCP tool IDs; rejects unsupported, gated, and unapproved steps. Never executes any stage or attests scope or kernel fence.",
+      "risk": "R0",
+      "adapter": "plan_preview",
+      "mode": "both",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9-]{36}$"
+          },
+          "steps": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[A-Za-z0-9_.-]{1,100}$"
+            }
+          }
+        },
+        "required": [
+          "task_id",
+          "steps"
+        ]
+      }
     }
   ]
 }
