@@ -185,3 +185,18 @@ Check `opencode mini --help`, `opencode run --help`, and
 
 See upstream https://opencode.ai/docs/cli/commands and
 https://github.com/anomalyco/opencode/issues/53728.
+
+## Full-screen OpenCode v2 is the SECRA default (post-PR correction)
+
+`mini` is only OpenCode's reduced interactive interface. SECRA's default
+one-command `secra` now launches **full-screen `opencode`**, selecting the
+SECRA primary agent through the process-local `OPENCODE_CONFIG_CONTENT`
+`default_agent` override. When the operator has existing inline JSON config,
+the launcher merges just the default-agent field and preserves the selected
+provider, model, 9Router configuration and all other inline settings. It
+refuses malformed inline settings instead of silently overriding them.
+The launcher's override is not persisted to the global OpenCode config.
+Already selected agents in resumed sessions may remain selected; `/agents`
+lets the operator choose `secra` as needed. For maintenance, use normal
+`opencode` and choose `build` in `/agents`. Never confuse `mini` with the
+full TUI, and never pass unsupported `--agent` to the root command.
