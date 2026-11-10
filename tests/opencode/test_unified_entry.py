@@ -1,6 +1,7 @@
 """Single SECRA entry point: global v2 agent, safe launcher and legacy coexistence."""
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
