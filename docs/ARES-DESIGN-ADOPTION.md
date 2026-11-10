@@ -26,11 +26,15 @@ techniques, and attack graph are **not** imported.
 
 The existing MCP manifest remains the only inventory of reviewed callable
 tools; the new `workflow.plan_preview` R0 adapter accepts **only** an operator
-task UUID and 1-8 ordered manifest tool IDs. It validates the request with
+task UUID plus either 1-8 ordered manifest tool IDs or one of five fixed
+offline goal templates (`engagement_overview`, `demo_web_baseline`,
+`artifact_triage`, `sapper_graph_review`, `live_recon_review`). It validates the request with
 closed JSON Schema, resolves current task mode/status from the local TaskStore,
 then classifies each step using `inspect_capabilities` and the existing risk
 and adapter metadata. It rejects unknown IDs and disallows duplicates,
-raw parameters, target data, argv, scope or self-recursive previews.
+raw parameters, target data, argv, scope or self-recursive previews. Exactly
+one of `steps` and `goal` is required; there is no free-form LLM-generated
+command, network destination, or tool argument.
 
 Its output is a bounded, redacted summary with **0 child tool executions**;
 one audit entry records the preview invocation itself. There is no execution
@@ -63,6 +67,12 @@ call `workflow.plan_preview` with:
   "task_id": "OPERATOR_SUPPLIED_CANONICAL_UUID",
   "steps": ["inventory.read", "demo.nmap_scan", "nmap.tcp_top20"]
 }
+```
+
+Or use a fixed reviewed goal instead of a free-form step list:
+
+```json
+{"task_id": "OPERATOR_SUPPLIED_CANONICAL_UUID", "goal": "demo_web_baseline"}
 ```
 
 Expected: metadata and simulation candidates, plus the live Nmap step blocked
