@@ -167,3 +167,21 @@ python3 "$STAGE/scripts/secra_plan_benchmark.py" --iterations 250 --warmup 20
 
 Do not extrapolate this p95 to model inference, tool execution or network
 scans. Live deployment remains deferred.
+
+## OpenCode v2 launcher compatibility (verified from upstream CLI)
+
+OpenCode v2's root full-screen `opencode` command does **not** accept
+`--agent`. Use `opencode mini --agent secra` for the single-command
+interactive launcher, or `opencode run --agent secra "..."` for one-shot
+scripted calls. The SECRA-owned launcher has been corrected to invoke
+`opencode mini --agent secra` while preserving the existing managed V1
+marker, so the reviewed `--replace` installer can safely back up and upgrade
+an already installed managed script. Do not change model/provider or 9Router.
+
+For the full-screen TUI, launch `opencode` and choose an available agent
+inside the interface; do not use the unsupported root `--agent` flag.
+Check `opencode mini --help`, `opencode run --help`, and
+`opencode debug agents` on the actual Kali version before updating.
+
+See upstream https://opencode.ai/docs/cli/commands and
+https://github.com/anomalyco/opencode/issues/53728.
