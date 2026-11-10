@@ -18,7 +18,7 @@ SCRIPT = (
     "  printf 'SECRA: OpenCode executable not found in PATH.\\n' >&2\n"
     "  exit 127\n"
     "fi\n"
-    'exec opencode --agent secra "$@"\n'
+    'exec opencode mini --agent secra "$@"\n'
 )
 
 
