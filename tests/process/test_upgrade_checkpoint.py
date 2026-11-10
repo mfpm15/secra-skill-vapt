@@ -128,21 +128,18 @@ def test_checkpoint_blocks_launcher_content_changes(tmp_path):
     assert "LAUNCHER_CHANGED" in verdict["checks_failed"]
 
 
-def test_exact_managed_launcher_v1_to_v2_is_not_false_regression(tmp_path):
-    from scripts.secra_launcher import SCRIPT
+@pytest.mark.parametrize("legacy_variant", ["v1", "mini"])
+def test_exact_managed_launcher_upgrade_preserves_full_tui(tmp_path, legacy_variant):
+    from scripts.secra_launcher import SCRIPT, LEGACY_V1_SCRIPT, LEGACY_MINI_SCRIPT
     from scripts.secra_upgrade_checkpoint import recognized_launcher_migration
     repo, config, data, launcher = fixture_install(tmp_path)
-    legacy = SCRIPT.replace(
-        'exec opencode mini --agent secra "$@"',
-        'exec opencode --agent secra "$@"',
-    )
+    legacy = LEGACY_V1_SCRIPT if legacy_variant == "v1" else LEGACY_MINI_SCRIPT
     launcher.write_text(legacy)
     before = snapshot(repo, config, data, launcher)
     launcher.write_text(SCRIPT)
     after = snapshot(repo, config, data, launcher)
     verdict = compare(before, after)
-    assert recognized_launcher_migration(before["launcher_sha256"],
-                                         after["launcher_sha256"])
+    assert recognized_launcher_migration(before["launcher_sha256"], after["launcher_sha256"])
     assert verdict["compatible"] is True
     assert verdict["recognized_launcher_migration"] is True
     launcher.write_text(SCRIPT + "# unauthorized change\\n")
