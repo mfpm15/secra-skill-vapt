@@ -116,3 +116,13 @@ def test_checkpoint_symlinks_denied(tmp_path):
 def test_missing_baseline_schema_rejected():
     with pytest.raises(ValueError, match="SCHEMA"):
         compare({"schema": "wrong"}, {"schema": SCHEMA})
+
+
+def test_checkpoint_blocks_launcher_content_changes(tmp_path):
+    repo, config, data, launcher = fixture_install(tmp_path)
+    old = snapshot(repo, config, data, launcher)
+    launcher.write_text("#!/bin/sh\\necho replaced\\n")
+    new = snapshot(repo, config, data, launcher)
+    verdict = compare(old, new)
+    assert not verdict["compatible"]
+    assert "LAUNCHER_CHANGED" in verdict["checks_failed"]
