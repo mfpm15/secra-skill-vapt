@@ -88,3 +88,82 @@ in demo mode. This is **not** a network scan.
    attestation **before** any multi-tool execution.
 4. UI campaign planner, graph exploration, and report improvements after
    backend policy and provenance tests.
+
+## Stability checkpoint and safe rollout (deferred Kali stage)
+
+The existing Kali installation is not remotely accessible from this GitHub
+workflow. CI on Ubuntu 3.12 does not demonstrate that the currently-installed
+Kali revision, OpenCode model or 9Router config work. The proven GitHub
+compatibility anchor is `main@302be31` with a green CI; the **actual Kali**
+commit must be captured locally before applying any changes.
+
+**Before an upgrade, without touching the installed checkout:**
+
+1. Record Kali VM snapshot/backup of the existing user config, engagement DB
+   and encrypted evidence store using operator-approved secure storage.
+   The metadata checkpoint below is NOT a content backup or rollback image.
+2. Checkout the reviewed *candidate* to a separate non-executing staging
+   directory, e.g. `$HOME/.local/share/secra/staging`. Never run its
+   installer or change active `~/.config/opencode` at this stage.
+3. Run the candidate's metadata tool against the still-running old location:
+
+```bash
+STAGE="$HOME/.local/share/secra/staging"
+ACTIVE="$HOME/.local/share/secra/repo"
+mkdir -p "$HOME/.local/state/secra/upgrade"
+python3 "$STAGE/scripts/secra_upgrade_checkpoint.py" capture \
+  --repo "$ACTIVE" \
+  --output "$HOME/.local/state/secra/upgrade/before.json"
+```
+
+The `--data-dir` option is REQUIRED if the active SECRA database/vault uses
+a non-default location not set in `SECRA_DATA_DIR`. No credentials or evidence
+are included in the checkpoint; it records only file digests, source revision,
+the legacy manifest contracts, installed agent/skill names and data presence.
+The checkpoint is created with permission `0600` and refuses to overwrite.
+
+**Do NOT deploy the candidate until all GitHub CI gates pass.** When a
+maintenance window has been approved, perform a dry run and controlled install,
+then capture a new local snapshot and compare with the old one:
+
+```bash
+python3 "$STAGE/scripts/secra_upgrade_checkpoint.py" compare \
+  --repo "$ACTIVE" \
+  --baseline "$HOME/.local/state/secra/upgrade/before.json"
+```
+
+Exit `0` means checked metadata are compatible, exit `2` indicates
+differences requiring operator review, exit `1` means checkpoint error.
+For security, modifying an existing OpenCode provider/model config hash is
+treated as a failure even if the change was planned; any such change must
+be manually inspected and separately approved. Never print config contents.
+
+**CI release criteria:**
+
+- The first **20** MCP schemas must match the baseline Git blob
+  `5c79ed120f4a82d06d0506f13e79f487128f4d98`, and 9
+  gateway/security/installer files must match reviewed baseline digests.
+- All prior smoke, masking, 9Router transport/privacy, agent, MCP, vault,
+  continuity and Sapper unit/integration tests must pass.
+- The ARES-inspired plan preview must perform zero child execution and never
+  classify gated/live/R3/R4 or unknown tools as execution-ready.
+- The offline latency benchmark must report p50/p95/max; CI doesn't enforce
+  an absolute runtime bound (shared runners are noisy). Actual improvements
+  require repeated measurements on the SAME Kali host/load and comparable
+  task/model conditions.
+- No 9Router live correctness or Kali kernel fence proof is claimed by CI.
+
+**Rollback:** stop the rollout if the comparison fails; keep the original
+Kali VM snapshot and user-owned encrypted backups. Never use blind
+`git reset --hard` or destructive DB replacement. This PR adds no
+database migrations, but future database changes need explicit
+expand/contract rollback compatibility testing.
+
+Benchmark command for staging/CI (pure offline policy overhead):
+
+```bash
+python3 "$STAGE/scripts/secra_plan_benchmark.py" --iterations 250 --warmup 20
+```
+
+Do not extrapolate this p95 to model inference, tool execution or network
+scans. Live deployment remains deferred.
