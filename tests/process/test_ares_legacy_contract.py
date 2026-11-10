@@ -15,17 +15,18 @@ from app.mcp.manifest import ToolManifest
 BASELINE_MAIN = "302be31d0db6de717883bd3583e466232b7af106"
 BASELINE_MANIFEST_GIT_BLOB_SHA1 = "5c79ed120f4a82d06d0506f13e79f487128f4d98"
 BASELINE_TOOL_COUNT = 20
-EXPECTED_CORE_FILES = (
-    "app/sapper_integration.py",
-    "app/gateway/fence.py",
-    "app/masking/redact.py",
-    "app/masking/rehydrate.py",
-    "app/evidence_vault.py",
-    "app/tool_gateway.py",
-    "app/loop/store.py",
-    "scripts/opencode_global.py",
-    "scripts/secra_launcher.py",
-)
+BASELINE_CORE_BLOBS = {
+    "app/sapper_integration.py": "18f5cf4b7ca7921abaffc407f53d11f5834c1dab",
+    "app/gateway/fence.py": "17085e7990fb27979322ae808f38c7cca1c6e7cf",
+    "app/masking/redact.py": "96301148e83ed04c038957a5b8f08d5c023e6f91",
+    "app/masking/rehydrate.py": "ed69cdd330238503d3ddca7732b667c9c873eff4",
+    "app/evidence_vault.py": "66722be2ee6d4d827fb56f0e13f21da33a607733",
+    "app/tool_gateway.py": "631a5dfd13cdbeb78d02cdd033e8cacd0a6d2e41",
+    "app/loop/store.py": "7210c7a21ad81e745567f0e6f1cd0c77289bf1a6",
+    "scripts/opencode_global.py": "f3a531ab6867c8cc0e004f66da15bcd706bc73a3",
+    "scripts/secra_launcher.py": "36618d88fa7a54be480935130dc6873eae3566d9"
+}
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -62,8 +63,10 @@ def test_only_additive_planning_adapter_over_existing_registry():
 
 
 def test_legacy_critical_source_files_still_present():
-    for relative in EXPECTED_CORE_FILES:
-        assert (ROOT / relative).is_file(), relative
+    for relative, pinned_blob in BASELINE_CORE_BLOBS.items():
+        path = ROOT / relative
+        assert path.is_file(), relative
+        assert _git_blob_sha1(path.read_bytes()) == pinned_blob, relative
 
 
 def test_one_entrypoint_kept_and_not_replaced():
