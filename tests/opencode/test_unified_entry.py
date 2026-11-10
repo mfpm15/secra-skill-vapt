@@ -66,7 +66,7 @@ def test_global_launcher_install_verify_and_invokes_opencode_with_secra(tmp_path
         capture_output=True, text=True, cwd="/tmp"
     )
     assert executed.returncode == 0
-    assert executed.stdout == "ARGS=--version\\n"
+    assert executed.stdout == "ARGS=--version\n"
     assert len(list((config / "agents").glob("*.md"))) == 28
 
 
@@ -145,11 +145,11 @@ def test_launcher_starts_full_screen_tui_with_scoped_secra_default(tmp_path):
     system.mkdir()
     opencode = system / "opencode"
     opencode.write_text(
-        "#!/bin/sh\\n"
-        'if [ "$1" = "--agent" ]; then echo "Unrecognized flag" >&2; exit 2; fi\\n'
-        'if [ "$1" = "mini" ]; then exit 3; fi\\n'
-        'python3 -c "import json,os; c=json.loads(os.environ[\\\"OPENCODE_CONFIG_CONTENT\\\"]); assert c[\\\"default_agent\\\"]==\\\"secra\\\"" || exit 4\\n'
-        "exit 0\\n"
+        "#!/bin/sh\n"
+        'if [ "$1" = "--agent" ]; then echo "Unrecognized flag" >&2; exit 2; fi\n'
+        'if [ "$1" = "mini" ]; then exit 3; fi\n'
+        'python3 -c "import json,os; c=json.loads(os.environ[\\\"OPENCODE_CONFIG_CONTENT\\\"]); assert c[\\\"default_agent\\\"]==\\\"secra\\\"" || exit 4\n'
+        "exit 0\n"
     )
     opencode.chmod(0o700)
     env = {**os.environ, "PATH": str(system) + os.pathsep + os.environ["PATH"]}
@@ -166,11 +166,11 @@ def test_launcher_preserves_inline_model_and_provider_config(tmp_path):
     system.mkdir()
     opencode = system / "opencode"
     opencode.write_text(
-        '#!/bin/sh\\n'
+        '#!/bin/sh\n'
         "python3 -c 'import json,os; c=json.loads(os.environ[\"OPENCODE_CONFIG_CONTENT\"]); "
         'assert c["default_agent"]=="secra"; '
         'assert c["model"]=="9router/current-model"; '
-        'assert c["provider"]["9router"]["timeout"]==123' "\\n"
+        'assert c["provider"]["9router"]["timeout"]==123' "\n"
     )
     opencode.chmod(0o700)
     env = {**os.environ, "PATH": str(system) + os.pathsep + os.environ["PATH"],
@@ -188,7 +188,7 @@ def test_launcher_rejects_malformed_inline_config_without_falling_back(tmp_path)
     system = tmp_path / "fake-bin"
     system.mkdir()
     opencode = system / "opencode"
-    opencode.write_text("#!/bin/sh\\nexit 0\\n")
+    opencode.write_text("#!/bin/sh\nexit 0\n")
     opencode.chmod(0o700)
     env = {**os.environ, "PATH": str(system) + os.pathsep + os.environ["PATH"],
            "OPENCODE_CONFIG_CONTENT": "{bad-json"}
