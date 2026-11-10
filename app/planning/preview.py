@@ -13,6 +13,35 @@ from app.loop.store import TaskStore
 from app.mcp.manifest import ToolManifest
 
 MAX_STEPS = 8
+# Fixed offline goal templates: reviewed names only, with no target data,
+# LLM commands, tool parameters, dynamic discovery or execution side effects.
+GOAL_TEMPLATES = {
+    "engagement_overview": (
+        "inventory.read", "workflow.capabilities", "workflow.handoff",
+    ),
+    "demo_web_baseline": (
+        "inventory.read", "demo.nmap_scan", "demo.httpx_probe", "report.summary",
+    ),
+    "artifact_triage": (
+        "inventory.read", "artifact.sha256", "artifact.file_type",
+        "artifact.strings",
+    ),
+    "sapper_graph_review": (
+        "workflow.capabilities", "workflow.graph_frontier", "workflow.handoff",
+    ),
+    "live_recon_review": (
+        "inventory.read", "workflow.capabilities",
+        "nmap.tcp_top20", "curl.http_head",
+    ),
+}
+
+
+def goal_steps(goal: str) -> list[str]:
+    """Resolve one first-party fixed sequence; never generate a live action."""
+    if not isinstance(goal, str) or goal not in GOAL_TEMPLATES:
+        raise PlanError("PLAN_GOAL_UNREVIEWED")
+    return list(GOAL_TEMPLATES[goal])
+
 _STEP = re.compile(r"[A-Za-z0-9_.-]{1,100}\Z")
 # No user-supplied targets, argv, URLs, credentials, network destinations,
 # parameters or LLM output are accepted. Every selected ID must be reviewed.
