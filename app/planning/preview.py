@@ -100,7 +100,7 @@ def short_preview(result: dict) -> str:
         f"{x['step']}:{x['tool']}={x['verdict']}" for x in result["steps"]
     )
     return (
-        "SECRA plan " + result["plan_verdict"] + ": " + steps
-        + ". OFFLINE preview; 0 tools executed; fence NOT attested; "
-        "operator authorization still required."
+        "OFFLINE PREVIEW ONLY; 0 tools executed; fence NOT attested; "
+        "no execution authorization. SECRA " + result["plan_verdict"]
+        + ": " + steps
     )[:490]
