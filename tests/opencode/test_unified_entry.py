@@ -170,7 +170,7 @@ def test_launcher_preserves_inline_model_and_provider_config(tmp_path):
         "python3 -c 'import json,os; c=json.loads(os.environ[\"OPENCODE_CONFIG_CONTENT\"]); "
         'assert c["default_agent"]=="secra"; '
         'assert c["model"]=="9router/current-model"; '
-        'assert c["provider"]["9router"]["timeout"]==123' "\n"
+        'assert c["provider"]["9router"]["timeout"]==123' + "'\n"
     )
     opencode.chmod(0o700)
     env = {**os.environ, "PATH": str(system) + os.pathsep + os.environ["PATH"],
